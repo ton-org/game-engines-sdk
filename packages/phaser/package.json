@@ -1,0 +1,23 @@
+{
+    "name": "ton-phaser",
+    "version": "0.1.0",
+    "main": "dist/phaser/src/index.js",
+    "types": "dist/phaser/src/index.d.ts",
+    "scripts": {
+        "dev": "tsc -p tsconfig.dev.json --watch",
+        "build": "tsc"
+    },
+    "peerDependencies": {
+        "phaser": "^3.0.0",
+        "@tonconnect/sdk": "^3.0.0",
+        "@ton/ton": "^13.0.0",
+        "ua-parser-js": "^1.0.0"
+    },
+    "devDependencies": {
+        "phaser": "^3.70.0",
+        "@tonconnect/sdk": "^3.0.0",
+        "@ton/ton": "^13.5.1",
+        "ua-parser-js": "^1.0.37",
+        "@types/ua-parser-js": "^0.7.39"
+    }
+}

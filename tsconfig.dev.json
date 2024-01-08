@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        // Checks
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "allowUnreachableCode": true,
+        // Development specific
+        "removeComments": false,
+        "sourceMap": true
+    }
+}

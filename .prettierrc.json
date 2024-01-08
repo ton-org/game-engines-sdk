@@ -1,0 +1,31 @@
+{
+    "parser": "typescript",
+    "useTabs": false,
+    "tabWidth": 2,
+    "singleQuote": true,
+    "jsxSingleQuote": false,
+    "semi": true,
+    "bracketSpacing": false,
+    "printWidth": 100,
+    "proseWrap": "always",
+    "trailingComma": "none",
+    "arrowParens": "always",
+    "bracketSameLine": false,
+    "endOfLine": "lf",
+    "htmlWhitespaceSensitivity": "strict",
+    "overrides": [
+        {
+            "files": ["*.json"],
+            "options": {
+                "parser": "json",
+                "tabWidth": 4
+            }
+        },
+        {
+            "files": ["*.yml"],
+            "options": {
+                "parser": "yaml"
+            }
+        }
+    ]
+}
