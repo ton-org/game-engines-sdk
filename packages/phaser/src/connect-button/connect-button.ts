@@ -325,7 +325,7 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
     );
   }
 
-  public destroy() {
+  public override destroy() {
     this.unsubscribeFromConnector();
     this.cancelIconChange();
     // todo Will the super destroy() call remove all listeners?

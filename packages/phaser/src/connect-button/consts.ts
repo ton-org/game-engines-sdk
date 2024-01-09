@@ -65,7 +65,13 @@ export const buttonDesign = {
   }
 };
 
-export const locales: {[k: string]: Locale} = {
+export interface LocalesDictionary {
+  en: Locale;
+  ru: Locale;
+  [k: string]: Locale;
+}
+
+export const locales: LocalesDictionary = {
   en: {
     connectWallet: 'Connect Wallet',
     disconnectWallet: 'Disconnect',

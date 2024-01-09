@@ -60,13 +60,13 @@ function urlParseHashParams(locationHash: string): Record<string, string> {
     return params;
   }
   if (locationHash.indexOf('=') < 0 && locationHash.indexOf('?') < 0) {
-    params._path = urlSafeDecode(locationHash);
+    params['_path'] = urlSafeDecode(locationHash);
     return params;
   }
   let qIndex = locationHash.indexOf('?');
   if (qIndex >= 0) {
     let pathParam = locationHash.substr(0, qIndex);
-    params._path = urlSafeDecode(pathParam);
+    params['_path'] = urlSafeDecode(pathParam);
     locationHash = locationHash.substr(qIndex + 1);
   }
   let query_params = urlParseQueryString(locationHash);
@@ -83,13 +83,13 @@ try {
 } catch (e) {}
 
 let tmaPlatform: TmaPlatform = 'unknown';
-if (initParams.tgWebAppPlatform) {
-  tmaPlatform = initParams.tgWebAppPlatform as TmaPlatform;
+if (initParams['tgWebAppPlatform']) {
+  tmaPlatform = initParams['tgWebAppPlatform'] as TmaPlatform;
 }
 
 let webAppVersion = '6.0';
-if (initParams.tgWebAppVersion) {
-  webAppVersion = initParams.tgWebAppVersion;
+if (initParams['tgWebAppVersion']) {
+  webAppVersion = initParams['tgWebAppVersion'];
 }
 
 function getWindow(): Window | undefined {
