@@ -1,61 +1,66 @@
-import {TonClient, Address} from '@ton/ton';
-import {Cell, beginCell} from '@ton/core';
-import {GameFi} from './game-fi';
-import {AmountInTon} from './types';
+import {NftItemManager as DomainNftItemManager, NftItem as DomainNftItem} from '../ton/nft-item';
+import {TonClient, Address} from './external';
+import {SendTransactionResponse, WalletConnector} from './interfaces';
+import {AddressUtils, Convertor, createTransactionExpiration} from './utils';
 
-export interface NftItemData {
-  initialized: boolean;
-  index: bigint;
-  collection: Address | null;
-  owner: Address | null;
-  individualContent: Cell | null;
+export interface NftItem {
+  readonly initialized: boolean;
+  readonly index: number;
+  readonly collection: string;
+  readonly owner: string;
+  readonly content: string | null;
+  readonly raw: DomainNftItem;
 }
 
-export interface NftTransferRequest {
-  queryId?: bigint;
-  to: Address;
-  responseDestination?: Address;
-  customPayload?: Cell;
-  forwardAmount?: bigint;
-  forwardPayload?: Cell;
-  value?: bigint;
+// todo handle queryId,customPayload, forwardAmount, forwardPayload params
+export interface NftTransferParams {
+  nft: Address | string;
+  from: Address | string;
+  to: Address | string;
 }
 
-export class NftItem {
-  public static readonly transferOperationCode = 0x5fcc3d14;
-  public static transferFeePrepay: AmountInTon = 0.05;
-  public static transferNotificationFee: AmountInTon = 0.000000001;
+export class NftItemManager {
+  private readonly domainManager: DomainNftItemManager;
 
-  constructor(private readonly tonClient: TonClient) {}
+  constructor(
+    private readonly tonClient: TonClient,
+    public readonly walletConnector: WalletConnector
+  ) {
+    this.domainManager = new DomainNftItemManager(this.tonClient);
+  }
 
-  async getData(address: Address | string): Promise<NftItemData> {
-    const {stack} = await this.tonClient.runMethod(
-      GameFi.addressStringToAddress(address),
-      'get_nft_data'
-    );
+  public async getData(address: Address | string): Promise<NftItem> {
+    const domainData = await this.domainManager.getData(address);
 
     return {
-      initialized: stack.readBoolean(),
-      index: stack.readBigNumber(),
-      collection: stack.readAddressOpt(),
-      owner: stack.readAddressOpt(),
-      individualContent: stack.readCellOpt()
+      initialized: domainData.initialized,
+      index: Number(domainData.index),
+      collection: domainData.collection ? AddressUtils.toString(domainData.collection) : '',
+      owner: domainData.owner ? AddressUtils.toString(domainData.owner) : '',
+      // todo handle meta loading
+      content:
+        domainData.individualContent == null
+          ? null
+          : domainData.individualContent.toBoc().toString('base64'),
+      raw: domainData
     };
   }
 
-  async createTransferPayload(request: NftTransferRequest) {
-    return beginCell()
-      .storeUint(NftItem.transferOperationCode, 32)
-      .storeUint(request.queryId ?? 0, 64)
-      .storeAddress(request.to)
-      .storeAddress(request.responseDestination)
-      .storeMaybeRef(request.customPayload)
-      .storeCoins(request.forwardAmount ?? 0)
-      .storeMaybeRef(request.forwardPayload)
-      .endCell();
-  }
+  public async transfer({nft, from, to}: NftTransferParams): Promise<SendTransactionResponse> {
+    const payload = await this.domainManager.createTransferPayload({
+      to: AddressUtils.toObject(to),
+      responseDestination: AddressUtils.toObject(from)
+    });
 
-  async transfer() {
-    throw new Error('Not implemented.');
+    return this.walletConnector.sendTransaction({
+      validUntil: createTransactionExpiration(),
+      messages: [
+        {
+          address: AddressUtils.toString(nft),
+          amount: Convertor.toNano(DomainNftItemManager.transferFeePrepay).toString(),
+          payload: payload.toBoc().toString('base64')
+        }
+      ]
+    });
   }
 }

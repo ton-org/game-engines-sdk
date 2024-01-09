@@ -1,32 +1,77 @@
-import TonConnect from '@tonconnect/sdk';
-import {toNano, TonClient, Address} from '@ton/ton';
+import {TonClient, TonConnect, Address, Cell} from './external';
+import {NftItemManager, NftTransferParams} from './nft-item';
+import {NftCollectionManager} from './nft-collection';
+import {WalletConnector, WalletConnectorOptions, Wallet, Account} from './interfaces';
+import {AddressUtils, Convertor, createTransactionExpiration} from './utils';
 import {AmountInTon} from './types';
-import {NftItem} from './nft-item';
-import {NftCollection} from './nft-collection';
-import {WalletConnector, Wallet, Account, WalletConnectorOptions} from './interfaces';
 
-export abstract class GameFi {
-  private static transactionTtl = 3600;
-  private static walletConnector: WalletConnector | null = null;
-
-  public readonly wallet: Wallet;
-  public readonly account: Account;
-  private readonly tonClient: TonClient;
-  public readonly nft: {
-    collection: NftCollection;
-    item: NftItem;
-  };
+class Nft {
+  private readonly manager: NftItemManager;
 
   constructor(
+    private readonly tonClient: TonClient,
     public readonly walletConnector: WalletConnector,
-    options?: {
-      gameShopAddress: string;
-      gameShopJettonAddress: string;
-    }
+    public readonly account: Account
   ) {
+    this.manager = new NftItemManager(this.tonClient, this.walletConnector);
+  }
+
+  public async getData(address: Address | string) {
+    return this.manager.getData(address);
+  }
+
+  public async transfer(params: Omit<NftTransferParams, 'from'>) {
+    this.manager.transfer({...params, from: this.account.address});
+  }
+}
+
+class NftCollection {
+  private readonly manager: NftCollectionManager;
+
+  constructor(private readonly tonClient: TonClient) {
+    this.manager = new NftCollectionManager(this.tonClient);
+  }
+
+  public async getData(address: Address | string) {
+    return this.manager.getData(address);
+  }
+
+  public async getNftAddress(collection: Address | string, itemIndex: number | bigint) {
+    return this.manager.getNftAddress(collection, itemIndex);
+  }
+
+  public async getNftContent(
+    collection: Address | string,
+    itemIndex: number | bigint,
+    itemIndividualContent: Cell
+  ) {
+    return this.manager.getNftContent(collection, itemIndex, itemIndividualContent);
+  }
+}
+
+export abstract class GameFi {
+  private static walletConnector: WalletConnector | null = null;
+  private readonly tonClient: TonClient;
+
+  public static readonly utils = {
+    address: AddressUtils,
+    convertor: Convertor
+  };
+  public readonly walletConnector: WalletConnector;
+  public readonly wallet: Wallet;
+  public readonly account: Account;
+  public readonly nft: {
+    collection: NftCollection;
+    item: Nft;
+  };
+
+  constructor() {
+    const walletConnector = GameFi.getWalletConnector();
     if (walletConnector.wallet == null) {
       throw new Error('Connect a wallet before using GameFi.');
     }
+
+    this.walletConnector = walletConnector;
     this.wallet = walletConnector.wallet;
     this.account = walletConnector.wallet.account;
 
@@ -37,55 +82,9 @@ export abstract class GameFi {
     });
 
     this.nft = {
-      item: new NftItem(this.tonClient),
+      item: new Nft(this.tonClient, this.walletConnector, this.account),
       collection: new NftCollection(this.tonClient)
     };
-  }
-
-  public async pay({to, amount}: {to: string; amount: AmountInTon}) {
-    return this.walletConnector.sendTransaction({
-      validUntil: GameFi.createExpirationTimestamp(),
-      messages: [
-        {
-          address: to,
-          amount: toNano(amount).toString()
-        }
-      ]
-    });
-  }
-
-  public async payJetton(params: {to: string; amount: AmountInTon}) {
-    throw new Error('Not implemented');
-  }
-
-  public async transferNft({to, nft}: {to: string; nft: string}) {
-    const payload = await this.nft.item.createTransferPayload({
-      to: GameFi.addressStringToAddress(to),
-      responseDestination: GameFi.addressStringToAddress(this.account.address)
-    });
-
-    return this.walletConnector.sendTransaction({
-      validUntil: GameFi.createExpirationTimestamp(),
-      messages: [
-        {
-          address: nft,
-          amount: toNano(NftItem.transferFeePrepay).toString(),
-          payload: payload.toBoc().toString('base64')
-        }
-      ]
-    });
-  }
-
-  private static createExpirationTimestamp(): number {
-    return Math.floor(Date.now() / 1000) + GameFi.transactionTtl;
-  }
-
-  public static addressStringToAddress(address: Address | string): Address {
-    if (typeof address === 'string') {
-      return Address.parse(address);
-    }
-
-    return address;
   }
 
   public static createWalletConnector(options?: WalletConnectorOptions): WalletConnector {
@@ -95,9 +94,21 @@ export abstract class GameFi {
 
   public static getWalletConnector() {
     if (GameFi.walletConnector == null) {
-      throw new Error('Run "createWalletConnector" method before using wallet connector.');
+      throw new Error('Create the connector via "createWalletConnector" method first.');
     }
 
     return GameFi.walletConnector;
+  }
+
+  public async pay({to, amount}: {to: string; amount: AmountInTon}) {
+    return this.walletConnector.sendTransaction({
+      validUntil: createTransactionExpiration(),
+      messages: [
+        {
+          address: to,
+          amount: Convertor.toNano(amount).toString()
+        }
+      ]
+    });
   }
 }

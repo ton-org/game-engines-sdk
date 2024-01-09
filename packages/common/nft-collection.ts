@@ -1,34 +1,57 @@
-import {TonClient, Address} from '@ton/ton';
-import {Cell} from '@ton/core';
-import {GameFi} from './game-fi';
+import {
+  NftCollectionManager as DomainNftCollectionManager,
+  NftCollection as DomainNftCollection
+} from '../ton/nft-collection';
+import {TonClient, Address, Cell} from './external';
+import {AddressUtils} from './utils';
 
-export interface NftCollectionData {
-  nextItemIndex: bigint;
-  content: Cell;
-  owner: Address | null;
+export interface NftCollection {
+  nextItemIndex: number;
+  content: string;
+  owner: string;
+  raw: DomainNftCollection;
 }
 
-export class NftCollection {
-  constructor(private readonly tonClient: TonClient) {}
+export class NftCollectionManager {
+  private readonly domainManager: DomainNftCollectionManager;
 
-  async getData(address: Address | string): Promise<NftCollectionData> {
-    const {stack} = await this.tonClient.runMethod(
-      GameFi.addressStringToAddress(address),
-      'get_collection_data'
-    );
+  constructor(private readonly tonClient: TonClient) {
+    this.domainManager = new DomainNftCollectionManager(this.tonClient);
+  }
+
+  public async getData(address: Address | string): Promise<NftCollection> {
+    const domainData = await this.domainManager.getData(address);
 
     return {
-      nextItemIndex: stack.readBigNumber(),
-      content: stack.readCell(),
-      owner: stack.readAddressOpt()
+      nextItemIndex: Number(domainData.nextItemIndex),
+      content: domainData.content.toBoc().toString('base64'),
+      owner: domainData.owner ? AddressUtils.toString(domainData.owner) : '',
+      raw: domainData
     };
   }
 
-  async getNftContent() {
-    throw new Error('Not implemented.');
+  public async getNftAddress(
+    collection: Address | string,
+    itemIndex: number | bigint
+  ): Promise<string> {
+    const address = await this.domainManager.getNftAddress(
+      AddressUtils.toObject(collection),
+      BigInt(itemIndex)
+    );
+
+    return AddressUtils.toString(address);
   }
 
-  async getNftAddress() {
-    throw new Error('Not implemented.');
+  public async getNftContent(
+    collection: Address | string,
+    itemIndex: number | bigint,
+    // todo load and return meta data instead
+    itemIndividualContent: Cell
+  ) {
+    return this.domainManager.getNftContent(
+      AddressUtils.toObject(collection),
+      BigInt(itemIndex),
+      itemIndividualContent
+    );
   }
 }

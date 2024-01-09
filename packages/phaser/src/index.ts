@@ -1,3 +1,4 @@
+export * from '../../common/interfaces';
 export * from './connect-button/connect-button';
 export * from './connect-button/consts';
 export * from './connect-button/dropdown';
