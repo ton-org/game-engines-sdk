@@ -24,7 +24,7 @@ export class NftItemManager {
 
   constructor(
     private readonly tonClient: TonClient,
-    public readonly walletConnector: WalletConnector
+    private readonly walletConnector: WalletConnector
   ) {
     this.domainManager = new DomainNftItemManager(this.tonClient);
   }
@@ -46,8 +46,8 @@ export class NftItemManager {
     };
   }
 
-  public async transfer({nft, from, to}: NftTransferParams): Promise<SendTransactionResponse> {
-    const payload = await this.domainManager.createTransferPayload({
+  public transfer({nft, from, to}: NftTransferParams): Promise<SendTransactionResponse> {
+    const payload = this.domainManager.createTransferPayload({
       to: AddressUtils.toObject(to),
       responseDestination: AddressUtils.toObject(from)
     });

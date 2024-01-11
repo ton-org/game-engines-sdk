@@ -3,10 +3,10 @@ import {parseNftContent} from '../ton/content-nft';
 import {TonClient, TonConnect, Address, Cell} from './external';
 import {NftItemManager, NftTransferParams} from './nft-item';
 import {NftCollectionManager} from './nft-collection';
+import {JettonManager} from './jetton';
 import {WalletConnector, WalletConnectorOptions, Wallet, Account} from './interfaces';
 import {AddressUtils, Convertor, createTransactionExpiration} from './utils';
 import {AmountInTon} from './types';
-import {Jetton} from '../ton/jetton';
 
 class Nft {
   private readonly manager: NftItemManager;
@@ -83,7 +83,7 @@ export abstract class GameFi {
     collection: NftCollection;
     item: Nft;
   };
-  public readonly jetton: Jetton;
+  public readonly jetton: JettonManager;
 
   constructor() {
     const walletConnector = GameFi.getWalletConnector();
@@ -105,7 +105,7 @@ export abstract class GameFi {
       item: new Nft(this.tonClient, this.walletConnector, this.account),
       collection: new NftCollection(this.tonClient)
     };
-    this.jetton = new Jetton(this.tonClient);
+    this.jetton = new JettonManager(this.tonClient, this.walletConnector);
   }
 
   public static createWalletConnector(options?: WalletConnectorOptions): WalletConnector {

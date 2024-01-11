@@ -1,4 +1,4 @@
-import {Address, Cell, TonClient} from '../common/external';
+import {Address, Cell, TonClient, beginCell} from '../common/external';
 
 export interface JettonMinterData {
   totalSupply: bigint;
@@ -8,8 +8,19 @@ export interface JettonMinterData {
   jettonWalletCode: Cell;
 }
 
-export class Jetton {
+export interface JettonRequestCommon {
+  to: Address;
+  amount: bigint;
+  queryId?: bigint;
+  responseDestination?: Address;
+  customPayload?: Cell;
+  forwardAmount?: bigint;
+  forwardPayload?: Cell;
+}
+
+export class JettonManager {
   public static readonly transferOperationCode: number = 0x0f8a7ea5;
+  public static transferFeePrepay: number = 0.05;
 
   constructor(private readonly tonClient: TonClient) {}
 
@@ -25,24 +36,24 @@ export class Jetton {
     };
   }
 
-  /* public async createTransferPayload(request: any) {
+  public createTransferPayload(request: JettonRequestCommon): Cell {
     return beginCell()
-      .storeUint(Jetton.transferOperationCode, 32)
+      .storeUint(JettonManager.transferOperationCode, 32)
       .storeUint(request.queryId ?? 0, 64)
       .storeCoins(request.amount)
       .storeAddress(request.to)
-      .storeAddress(response)
+      .storeAddress(request.responseDestination)
       .storeMaybeRef(request.customPayload)
       .storeCoins(request.forwardAmount ?? 0)
       .storeMaybeRef(request.forwardPayload)
       .endCell();
-  } */
+  }
 
-  /* async getWalletAddress(owner: Address) {
-    return (
-      await this.tonClient.runMethod(owner, 'get_wallet_address', [
-        {type: 'slice', cell: beginCell().storeAddress(owner).endCell()}
-      ])
-    ).stack.readAddress();
-  } */
+  public async getWalletAddress(owner: Address): Promise<Address> {
+    const {stack} = await this.tonClient.runMethod(owner, 'get_wallet_address', [
+      {type: 'slice', cell: beginCell().storeAddress(owner).endCell()}
+    ]);
+
+    return stack.readAddress();
+  }
 }

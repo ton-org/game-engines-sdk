@@ -55,7 +55,7 @@ export class NftItemManager {
     return data;
   }
 
-  public async createTransferPayload(request: NftTransferRequest) {
+  public createTransferPayload(request: NftTransferRequest): Cell {
     return beginCell()
       .storeUint(NftItemManager.transferOperationCode, 32)
       .storeUint(request.queryId ?? 0, 64)

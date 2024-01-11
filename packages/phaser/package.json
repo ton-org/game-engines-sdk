@@ -16,7 +16,7 @@
     "devDependencies": {
         "phaser": "^3.70.0",
         "@tonconnect/sdk": "^3.0.0",
-        "@ton/ton": "^13.5.1",
+        "@ton/ton": "^13.9.0",
         "ua-parser-js": "^1.0.37",
         "@types/ua-parser-js": "^0.7.39"
     }

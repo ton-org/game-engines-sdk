@@ -1,5 +1,6 @@
 import {Address, toNano, fromNano} from './external';
 
+// todo extends from Address
 export abstract class AddressUtils {
   public static toObject(address: Address | string): Address {
     if (typeof address === 'string') {
