@@ -1,9 +1,12 @@
+import {DefaultContentResolver, loadFullContent} from '../ton/content';
+import {parseNftContent} from '../ton/content-nft';
 import {TonClient, TonConnect, Address, Cell} from './external';
 import {NftItemManager, NftTransferParams} from './nft-item';
 import {NftCollectionManager} from './nft-collection';
 import {WalletConnector, WalletConnectorOptions, Wallet, Account} from './interfaces';
 import {AddressUtils, Convertor, createTransactionExpiration} from './utils';
 import {AmountInTon} from './types';
+import {Jetton} from '../ton/jetton';
 
 class Nft {
   private readonly manager: NftItemManager;
@@ -21,7 +24,23 @@ class Nft {
   }
 
   public async transfer(params: Omit<NftTransferParams, 'from'>) {
-    this.manager.transfer({...params, from: this.account.address});
+    return this.manager.transfer({...params, from: this.account.address});
+  }
+
+  public async get(address: Address | string) {
+    const data = await this.manager.getData(address);
+    if (data.raw.individualContent != null) {
+      const content = parseNftContent(
+        await loadFullContent(data.raw.individualContent, new DefaultContentResolver())
+      );
+
+      return {
+        ...data,
+        content
+      };
+    }
+
+    return null;
   }
 }
 
@@ -64,6 +83,7 @@ export abstract class GameFi {
     collection: NftCollection;
     item: Nft;
   };
+  public readonly jetton: Jetton;
 
   constructor() {
     const walletConnector = GameFi.getWalletConnector();
@@ -85,6 +105,7 @@ export abstract class GameFi {
       item: new Nft(this.tonClient, this.walletConnector, this.account),
       collection: new NftCollection(this.tonClient)
     };
+    this.jetton = new Jetton(this.tonClient);
   }
 
   public static createWalletConnector(options?: WalletConnectorOptions): WalletConnector {

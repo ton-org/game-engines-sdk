@@ -106,14 +106,14 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
 
     btnCtr.on('pointerover', () => {
       scene.game.canvas.style.cursor = 'pointer';
-      if (this.wallet !== null) {
+      if (this.wallet != null) {
         this.repaintButtonBackground(styleSchema.backgroundColorHover, styleSchema.borderColor);
       }
       smoothScale(scene.tweens, btnCtr, 1.02, 125);
     });
     btnCtr.on('pointerout', () => {
       scene.game.canvas.style.cursor = 'default';
-      if (this.wallet !== null) {
+      if (this.wallet != null) {
         this.repaintButtonBackground(styleSchema.backgroundColor, styleSchema.borderColor);
       }
       smoothScale(scene.tweens, btnCtr, 1, 125);
@@ -222,7 +222,7 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
   }
 
   private cancelIconChange() {
-    if (this.changeIconTimer !== null) {
+    if (this.changeIconTimer != null) {
       clearTimeout(this.changeIconTimer);
       this.changeIconTimer = null;
     }
