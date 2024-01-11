@@ -1,3 +1,4 @@
+import {NftContentData, decodeContentData} from '../ton/content';
 import {NftItemManager as DomainNftItemManager, NftItem as DomainNftItem} from '../ton/nft-item';
 import {TonClient, Address} from './external';
 import {SendTransactionResponse, WalletConnector} from './interfaces';
@@ -8,7 +9,7 @@ export interface NftItem {
   readonly index: number;
   readonly collection: string;
   readonly owner: string;
-  readonly content: string | null;
+  readonly content: NftContentData | null;
   readonly raw: DomainNftItem;
 }
 
@@ -37,11 +38,8 @@ export class NftItemManager {
       index: Number(domainData.index),
       collection: domainData.collection ? AddressUtils.toString(domainData.collection) : '',
       owner: domainData.owner ? AddressUtils.toString(domainData.owner) : '',
-      // todo handle meta loading
-      content:
-        domainData.individualContent == null
-          ? null
-          : domainData.individualContent.toBoc().toString('base64'),
+      // todo do we need individualContent here?
+      content: domainData.content == null ? null : decodeContentData(domainData.content),
       raw: domainData
     };
   }

@@ -23,7 +23,7 @@ export class NftCollectionManager {
     };
   }
 
-  public async getNftAddress(collection: Address, itemIndex: bigint): Promise<Address> {
+  public async getNftAddressByIndex(collection: Address, itemIndex: bigint): Promise<Address> {
     const result = await this.tonClient.runMethod(collection, 'get_nft_address_by_index', [
       {type: 'int', value: itemIndex}
     ]);

@@ -18,6 +18,7 @@ export interface NftItem {
   collection: Address | null;
   owner: Address | null;
   individualContent: Cell | null;
+  content: Cell | null;
 }
 
 export class NftItemManager {
@@ -36,16 +37,17 @@ export class NftItemManager {
       'get_nft_data'
     );
 
-    const data = {
+    const data: NftItem = {
       initialized: stack.readBoolean(),
       index: stack.readBigNumber(),
       collection: stack.readAddressOpt(),
       owner: stack.readAddressOpt(),
-      individualContent: stack.readCellOpt()
+      individualContent: stack.readCellOpt(),
+      content: null
     };
 
     if (data.collection != null && data.individualContent != null) {
-      data.individualContent = await this.collectionManager.getNftContent(
+      data.content = await this.collectionManager.getNftContent(
         data.collection,
         data.index,
         data.individualContent

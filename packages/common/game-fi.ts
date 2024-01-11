@@ -27,11 +27,14 @@ class Nft {
     return this.manager.transfer({...params, from: this.account.address});
   }
 
+  // todo describe return type
   public async get(address: Address | string) {
     const data = await this.manager.getData(address);
-    if (data.raw.individualContent != null) {
+    // todo how about individualContent?
+    if (data.raw.content != null) {
+      // todo instead of loadFullContent we should only fetch and parse (content already contains the link)
       const content = parseNftContent(
-        await loadFullContent(data.raw.individualContent, new DefaultContentResolver())
+        await loadFullContent(data.raw.content, new DefaultContentResolver())
       );
 
       return {
@@ -55,10 +58,11 @@ class NftCollection {
     return this.manager.getData(address);
   }
 
-  public async getNftAddress(collection: Address | string, itemIndex: number | bigint) {
-    return this.manager.getNftAddress(collection, itemIndex);
+  public async getNftAddressByIndex(collection: Address | string, itemIndex: number | bigint) {
+    return this.manager.getNftAddressByIndex(collection, itemIndex);
   }
 
+  // todo I think we don't need this method for the client code
   public async getNftContent(
     collection: Address | string,
     itemIndex: number | bigint,

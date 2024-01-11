@@ -30,11 +30,11 @@ export class NftCollectionManager {
     };
   }
 
-  public async getNftAddress(
+  public async getNftAddressByIndex(
     collection: Address | string,
     itemIndex: number | bigint
   ): Promise<string> {
-    const address = await this.domainManager.getNftAddress(
+    const address = await this.domainManager.getNftAddressByIndex(
       AddressUtils.toObject(collection),
       BigInt(itemIndex)
     );

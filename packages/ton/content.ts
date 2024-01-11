@@ -6,6 +6,46 @@
 // No check is necessary because current repo has more strict TypeScript settings
 // @ts-nocheck
 
+/**
+ * Written manually (temporary)
+ */
+export interface NftContentData {
+  type: 'onchain' | 'offchain' | 'semichain';
+  onChainData?: Dictionary<bigint, Buffer>;
+  offChainUrl?: string;
+}
+
+export function decodeContentData(data: Cell): NftContentData {
+  const ds = data.beginParse();
+  const type = ds.loadUint(8);
+  if (type === 0x00) {
+    const data = ds.loadDict(Dictionary.Keys.BigUint(256), ContentDataValue);
+    const uri = data.get(hashKey('uri'));
+    if (uri !== undefined) {
+      const uriStr = uri.toString('utf-8');
+      return {
+        type: 'semichain',
+        onChainData: data,
+        offChainUrl: uriStr
+      };
+    }
+    return {
+      type: 'onchain',
+      onChainData: data
+    };
+  } else if (type === 0x01) {
+    const uri = ds.loadStringTail();
+    return {
+      type: 'offchain',
+      offChainUrl: uri
+    };
+  } else {
+    throw new Error('Unknown FullContent type: ' + type);
+  }
+}
+
+// File copy starts here
+
 import {Cell, Dictionary, DictionaryValue, Slice} from '@ton/core';
 import {sha256_sync} from '@ton/crypto';
 

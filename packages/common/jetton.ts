@@ -1,7 +1,15 @@
 import {JettonManager as DomainJetton} from '../ton/jetton';
-import {Address, TonClient} from './external';
+import {Address, Cell, TonClient} from './external';
 import {SendTransactionResponse, WalletConnector} from './interfaces';
 import {AddressUtils, Convertor, createTransactionExpiration} from './utils';
+
+export interface JettonMinterData {
+  totalSupply: number;
+  mintable: boolean;
+  adminAddress: string;
+  jettonContent: Cell;
+  jettonWalletCode: Cell;
+}
 
 export interface TransferParams {
   jetton: Address | string;
@@ -20,8 +28,17 @@ export class JettonManager {
     this.domainManager = new DomainJetton(this.tonClient);
   }
 
-  public async getData(address: Address | string) {
-    return this.domainManager.getData(AddressUtils.toObject(address));
+  public async getData(address: Address | string): Promise<JettonMinterData> {
+    const data = await this.domainManager.getData(AddressUtils.toObject(address));
+
+    return {
+      totalSupply: Number(data.totalSupply),
+      mintable: data.mintable,
+      adminAddress: data.adminAddress == null ? '' : AddressUtils.toString(data.adminAddress),
+      // todo parse content
+      jettonContent: data.jettonContent,
+      jettonWalletCode: data.jettonWalletCode
+    };
   }
 
   public async transfer({
