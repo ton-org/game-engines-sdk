@@ -113,8 +113,20 @@ export abstract class GameFi {
   }
 
   public static createWalletConnector(options?: WalletConnectorOptions): WalletConnector {
-    GameFi.walletConnector = new TonConnect(options);
+    if (GameFi.walletConnector == null) {
+      // maybe warn user if new options is different from the previous one? (edge case)
+      GameFi.walletConnector = new TonConnect(options);
+    }
+
     return GameFi.walletConnector;
+  }
+
+  /**
+   * Inject the connector in case it was created outside of the GameFi class.
+   * For example, if the connector was created via @tonconnect/ui
+   */
+  public static injectWalletConnector(walletConnector: WalletConnector) {
+    GameFi.walletConnector = walletConnector;
   }
 
   public static getWalletConnector() {
