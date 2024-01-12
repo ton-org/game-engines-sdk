@@ -1,6 +1,6 @@
 import {DefaultContentResolver, loadFullContent} from '../ton/content';
 import {parseNftContent} from '../ton/content-nft';
-import {TonClient, TonConnect, Address, Cell, getHttpEndpoint} from './external';
+import {TonClient, TonConnect, Address, Cell, getHttpEndpoint, TonClientOptions} from './external';
 import {NftItemManager, NftTransferParams} from './nft-item';
 import {NftCollectionManager} from './nft-collection';
 import {JettonManager} from './jetton';
@@ -72,6 +72,11 @@ class NftCollection {
   }
 }
 
+export interface GameFiInitialization {
+  connector?: TonConnect | WalletConnectorOptions;
+  client?: TonClient | TonClientOptions;
+}
+
 export abstract class GameFi {
   private static walletConnector: WalletConnector | null = null;
   private static tonClient: TonClient | null = null;
@@ -114,23 +119,29 @@ export abstract class GameFi {
     this.jetton = new JettonManager(this.tonClient, this.walletConnector);
   }
 
-  // todo simplify initialization - connector & client creation maybe joined to GameFi init
+  public static async init(options: GameFiInitialization = {}) {
+    const {connector, client} = options;
 
-  public static createWalletConnector(options?: WalletConnectorOptions): WalletConnector {
-    if (GameFi.walletConnector == null) {
-      // maybe warn user if new options is different from the previous one? (edge case)
-      GameFi.walletConnector = new TonConnect(options);
+    if (connector instanceof TonConnect) {
+      GameFi.walletConnector = connector;
+    } else {
+      GameFi.walletConnector = new TonConnect(connector);
     }
 
-    return GameFi.walletConnector;
-  }
+    if (client instanceof TonClient) {
+      GameFi.tonClient = client;
+    } else {
+      let clientOptions: TonClientOptions;
+      if (client == null) {
+        const endpoint = await getHttpEndpoint();
+        clientOptions = {endpoint};
+      } else {
+        clientOptions = client;
+      }
+      GameFi.tonClient = new TonClient(clientOptions);
+    }
 
-  /**
-   * Inject the connector in case it was created outside of the GameFi class.
-   * For example, if the connector was created via @tonconnect/ui.
-   */
-  public static injectWalletConnector(walletConnector: WalletConnector) {
-    GameFi.walletConnector = walletConnector;
+    return {connector: GameFi.walletConnector, client: GameFi.tonClient};
   }
 
   public static getWalletConnector() {
@@ -139,20 +150,6 @@ export abstract class GameFi {
     }
 
     return GameFi.walletConnector;
-  }
-
-  public static async createTonClient() {
-    const endpoint = await getHttpEndpoint();
-    GameFi.tonClient = new TonClient({endpoint});
-
-    return GameFi.tonClient;
-  }
-
-  /**
-   * Inject the TonClient in case it was created outside of the GameFi class.
-   */
-  public static injectTonClient(tonClient: TonClient) {
-    GameFi.tonClient = tonClient;
   }
 
   public static getTonClient() {
