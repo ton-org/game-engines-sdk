@@ -1,6 +1,6 @@
 import {DefaultContentResolver, loadFullContent} from '../ton/content';
 import {parseNftContent} from '../ton/content-nft';
-import {TonClient, TonConnect, Address, Cell} from './external';
+import {TonClient, TonConnect, Address, Cell, getHttpEndpoint} from './external';
 import {NftItemManager, NftTransferParams} from './nft-item';
 import {NftCollectionManager} from './nft-collection';
 import {JettonManager} from './jetton';
@@ -74,6 +74,7 @@ class NftCollection {
 
 export abstract class GameFi {
   private static walletConnector: WalletConnector | null = null;
+  private static tonClient: TonClient | null = null;
   private readonly tonClient: TonClient;
 
   public static readonly utils = {
@@ -95,15 +96,16 @@ export abstract class GameFi {
       throw new Error('Connect a wallet before using GameFi.');
     }
 
+    const tonClient = GameFi.getTonClient();
+    if (tonClient == null) {
+      throw new Error('Create TonClient before using GameFi.');
+    }
+
     this.walletConnector = walletConnector;
     this.wallet = walletConnector.wallet;
     this.account = walletConnector.wallet.account;
 
-    // use https://github.com/orbs-network/ton-access
-    this.tonClient = new TonClient({
-      endpoint: 'https://toncenter.com/api/v2/jsonRPC',
-      apiKey: '19841bdee86b16f94d6c1edd73596daf9624e20de9422799e36b3bd537148a8b'
-    });
+    this.tonClient = tonClient;
 
     this.nft = {
       item: new Nft(this.tonClient, this.walletConnector, this.account),
@@ -111,6 +113,8 @@ export abstract class GameFi {
     };
     this.jetton = new JettonManager(this.tonClient, this.walletConnector);
   }
+
+  // todo simplify initialization - connector & client creation maybe joined to GameFi init
 
   public static createWalletConnector(options?: WalletConnectorOptions): WalletConnector {
     if (GameFi.walletConnector == null) {
@@ -123,7 +127,7 @@ export abstract class GameFi {
 
   /**
    * Inject the connector in case it was created outside of the GameFi class.
-   * For example, if the connector was created via @tonconnect/ui
+   * For example, if the connector was created via @tonconnect/ui.
    */
   public static injectWalletConnector(walletConnector: WalletConnector) {
     GameFi.walletConnector = walletConnector;
@@ -135,6 +139,28 @@ export abstract class GameFi {
     }
 
     return GameFi.walletConnector;
+  }
+
+  public static async createTonClient() {
+    const endpoint = await getHttpEndpoint();
+    GameFi.tonClient = new TonClient({endpoint});
+
+    return GameFi.tonClient;
+  }
+
+  /**
+   * Inject the TonClient in case it was created outside of the GameFi class.
+   */
+  public static injectTonClient(tonClient: TonClient) {
+    GameFi.tonClient = tonClient;
+  }
+
+  public static getTonClient() {
+    if (GameFi.tonClient == null) {
+      throw new Error('Create the TonClient via "createTonClient" method first.');
+    }
+
+    return GameFi.tonClient;
   }
 
   public async pay({to, amount}: {to: string; amount: AmountInTon}) {
