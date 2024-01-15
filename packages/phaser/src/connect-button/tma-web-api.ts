@@ -4,6 +4,8 @@ https://github.com/ton-connect/sdk/blob/47383e374dea1b066f01d42a8f5a51c3fd505af9
 https://github.com/ton-connect/sdk/blob/f61090617439e80f29b688647f752cd760b84f66/packages/ui/src/app/utils/web-api.ts
 to keep all the logic from Connect UI lib
 
+Copied from tag 3.0.0
+
 // todo remove it after SKD update
 */
 
@@ -17,7 +19,7 @@ type TelegramWebviewProxy = {
 type ReturnStrategy = 'back' | 'none' | `${string}://${string}`;
 type TmaPlatform = 'android' | 'ios' | 'macos' | 'tdesktop' | 'weba' | 'web' | 'unknown';
 
-function convertToDirectLink(universalLink: string): string {
+function convertToTGDirectLink(universalLink: string): string {
   const url = new URL(universalLink);
 
   if (url.searchParams.has('attach')) {
@@ -26,6 +28,13 @@ function convertToDirectLink(universalLink: string): string {
   }
 
   return url.toString();
+}
+
+function convertToTGDeepLink(directLink: string): string {
+  const parsed = new URL(directLink);
+  const [, domain, appname] = parsed.pathname.split('/');
+  const startapp = parsed.searchParams.get('startapp');
+  return `tg://resolve?domain=${domain}&appname=${appname}&startapp=${startapp}`;
 }
 
 function urlSafeDecode(urlencoded: string): string {
@@ -83,13 +92,27 @@ try {
 } catch (e) {}
 
 let tmaPlatform: TmaPlatform = 'unknown';
-if (initParams['tgWebAppPlatform']) {
-  tmaPlatform = initParams['tgWebAppPlatform'] as TmaPlatform;
+// @ts-ignore
+if (initParams?.tgWebAppPlatform) {
+  // @ts-ignore
+  tmaPlatform = (initParams.tgWebAppPlatform as TmaPlatform) ?? 'unknown';
+}
+if (tmaPlatform === 'unknown') {
+  const window = getWindow();
+  // @ts-ignore
+  tmaPlatform = window?.Telegram?.WebApp?.platform ?? 'unknown';
 }
 
 let webAppVersion = '6.0';
-if (initParams['tgWebAppVersion']) {
-  webAppVersion = initParams['tgWebAppVersion'];
+// @ts-ignore
+if (initParams?.tgWebAppVersion) {
+  // @ts-ignore
+  webAppVersion = initParams.tgWebAppVersion;
+}
+if (!webAppVersion) {
+  const window = getWindow();
+  // @ts-ignore
+  webAppVersion = window?.Telegram?.WebApp?.version ?? '6.0';
 }
 
 function getWindow(): Window | undefined {
@@ -146,6 +169,10 @@ const TonConnectUIError = TonConnectError;
 
 function isIframe(): boolean {
   try {
+    const window = getWindow();
+    if (!window) {
+      return false;
+    }
     return window.parent != null && window !== window.parent;
   } catch (e) {
     return false;
@@ -187,6 +214,11 @@ function postEvent(eventType: 'web_app_open_tg_link', eventData: {path_full: str
 function postEvent(eventType: 'web_app_expand', eventData: {}): void;
 function postEvent(eventType: string, eventData: object): void {
   try {
+    const window = getWindow();
+    if (!window) {
+      throw new TonConnectUIError(`Can't post event to parent window: window is not defined`);
+    }
+
     if (window.TelegramWebviewProxy !== undefined) {
       window.TelegramWebviewProxy.postEvent(eventType, JSON.stringify(eventData));
     } else if (window.external && 'notify' in window.external) {
@@ -195,11 +227,11 @@ function postEvent(eventType: string, eventData: object): void {
       const trustedTarget = '*';
       const message = JSON.stringify({eventType: eventType, eventData: eventData});
       window.parent.postMessage(message, trustedTarget);
+    } else {
+      throw new TonConnectUIError(`Can't post event to TMA`);
     }
-
-    throw new TonConnectUIError(`Can't post event to TMA`);
   } catch (e) {
-    console.error(`Can't post event to parent window: ${e}`);
+    console.log(`Can't post event to parent window: ${e}`);
   }
 }
 
@@ -217,8 +249,7 @@ function sendOpenTelegramLink(link: string): void {
   if (isIframe() || versionAtLeast('6.1')) {
     postEvent('web_app_open_tg_link', {path_full: pathFull});
   } else {
-    // TODO: alias for openLinkBlank('https://t.me' + pathFull);, remove duplicated code
-    window.open('https://t.me' + pathFull, '_blank', 'noreferrer noopener');
+    openLinkBlank('https://t.me' + pathFull);
   }
 }
 
@@ -235,7 +266,7 @@ interface UserAgent {
   browser: 'chrome' | 'firefox' | 'safari' | undefined;
 }
 
-function getUserAgent(): UserAgent {
+export function getUserAgent(): UserAgent {
   const results = new UAParser().getResult();
   const osName = results.os.name?.toLowerCase();
   let os: UserAgent['os'];
@@ -281,23 +312,23 @@ function isOS(...os: UserAgent['os'][]): boolean {
   return os.includes(getUserAgent().os);
 }
 
-function convertToDeepLink(directLink: string): string {
-  const parsed = new URL(directLink);
-  const [, domain, appname] = parsed.pathname.split('/');
-  const startapp = parsed.searchParams.get('startapp');
-  return `tg://resolve?domain=${domain}&appname=${appname}&startapp=${startapp}`;
-}
+function openDeeplinkWithFallback(href: string, fallback: () => void): void {
+  const doFallback = (): void => {
+    if (isBrowser('safari')) {
+      // Safari does not support fallback to direct link.
+      return;
+    }
 
-function openIframeLink(href: string, fallback: () => void): void {
-  const iframe = document.createElement('iframe');
-  iframe.style.display = 'none';
-  iframe.src = href;
-  document.body.appendChild(iframe);
-
-  const fallbackTimeout = setTimeout(() => fallback(), 1000);
+    fallback();
+  };
+  const fallbackTimeout = setTimeout(() => doFallback(), 200);
   window.addEventListener('blur', () => clearTimeout(fallbackTimeout), {once: true});
 
-  setTimeout(() => document.body.removeChild(iframe), 1000);
+  openLink(href, '_self');
+}
+
+export function isBrowser(...browser: UserAgent['browser'][]): boolean {
+  return browser.includes(getUserAgent().browser);
 }
 
 export function redirectToTelegram(
@@ -310,25 +341,20 @@ export function redirectToTelegram(
 ): void {
   options = {...options};
   // TODO: Remove this line after all dApps and the wallets-list.json have been updated
-  const directLink = convertToDirectLink(universalLink);
+  const directLink = convertToTGDirectLink(universalLink);
   const directLinkUrl = new URL(directLink);
 
   if (!directLinkUrl.searchParams.has('startapp')) {
     directLinkUrl.searchParams.append('startapp', 'tonconnect');
   }
 
-  console.log('universalLink', universalLink);
-  console.log('directlink', directLink);
-  // throw new Error('exit')
-
   if (isInTMA()) {
-    console.log('isInTMA');
     if (isTmaPlatform('ios', 'android')) {
       // Use the `none` strategy, the current TMA instance will keep open.
       // TON Space should automatically open in stack and should close
       // itself after the user action.
 
-      options.returnStrategy = 'none';
+      options.returnStrategy = 'back';
       options.twaReturnUrl = undefined;
 
       sendOpenTelegramLink(addReturnStrategy(directLinkUrl.toString(), options));
@@ -337,10 +363,6 @@ export function redirectToTelegram(
       // The current TMA instance will close, and TON Space should
       // automatically open, and reopen the application once the user
       // action is completed.
-
-      if (!options.twaReturnUrl) {
-        throw new TonConnectUIError('`twaReturnUrl` is required for this platform');
-      }
 
       sendOpenTelegramLink(addReturnStrategy(directLinkUrl.toString(), options));
     } else if (isTmaPlatform('weba')) {
@@ -352,7 +374,7 @@ export function redirectToTelegram(
       // Similar to iOS/Android strategy, but opening another TMA occurs
       // through sending `web_app_open_tg_link` event to `parent`.
 
-      options.returnStrategy = 'none';
+      options.returnStrategy = 'back';
       options.twaReturnUrl = undefined;
 
       sendOpenTelegramLink(addReturnStrategy(directLinkUrl.toString(), options));
@@ -362,18 +384,15 @@ export function redirectToTelegram(
       openLinkBlank(addReturnStrategy(directLinkUrl.toString(), options));
     }
   } else {
-    console.log('is browser');
     // For browser
     if (isOS('ios', 'android')) {
-      // Use the `back` strategy. TON Space should pass the command to
-      // return to the initiating application to Telegram and close itself.
+      // Use the `none` strategy. TON Space should do nothing after the user action.
 
-      options.returnStrategy = 'back';
+      options.returnStrategy = 'none';
 
       openLinkBlank(addReturnStrategy(directLinkUrl.toString(), options.returnStrategy));
     } else if (isOS('macos', 'windows', 'linux')) {
-      // Use the `none` strategy.
-      // TON Space should close itself after the user action.
+      // Use the `none` strategy. TON Space should do nothing after the user action.
 
       options.returnStrategy = 'none';
       options.twaReturnUrl = undefined;
@@ -382,9 +401,9 @@ export function redirectToTelegram(
         openLinkBlank(addReturnStrategy(directLinkUrl.toString(), options));
       } else {
         const link = addReturnStrategy(directLinkUrl.toString(), options);
-        const deepLink = convertToDeepLink(link);
+        const deepLink = convertToTGDeepLink(link);
 
-        openIframeLink(deepLink, () => openLinkBlank(link));
+        openDeeplinkWithFallback(deepLink, () => openLinkBlank(link));
       }
     } else {
       // Fallback for unknown platforms. Should use desktop strategy.
