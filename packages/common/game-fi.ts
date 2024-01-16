@@ -7,6 +7,7 @@ import {JettonManager} from './jetton';
 import {WalletConnector, WalletConnectorOptions, Wallet, Account} from './interfaces';
 import {AddressUtils, Convertor, createTransactionExpiration} from './utils';
 import {AmountInTon} from './types';
+import {ReturnParams} from '../phaser/src/connect-button/connect-button';
 
 class Nft {
   private readonly manager: NftItemManager;
@@ -73,14 +74,16 @@ class NftCollection {
 }
 
 export interface GameFiInitialization {
-  connector?: TonConnect | WalletConnectorOptions;
-  client?: TonClient | TonClientOptions;
   network?: 'mainnet' | 'testnet';
+  connector?: WalletConnector | WalletConnectorOptions;
+  client?: TonClient | TonClientOptions;
+  returnStrategy?: ReturnParams;
 }
 
 export abstract class GameFi {
   private static walletConnector: WalletConnector | null = null;
   private static tonClient: TonClient | null = null;
+  private static initOptions: GameFiInitialization | null = null;
   private readonly tonClient: TonClient;
 
   public static readonly utils = {
@@ -121,9 +124,10 @@ export abstract class GameFi {
   }
 
   public static async init(options: GameFiInitialization = {}) {
+    GameFi.initOptions = options;
     const {connector, client, network = 'testnet'} = options;
 
-    if (connector instanceof TonConnect) {
+    if (GameFi.isTonConnectInstance(connector)) {
       GameFi.walletConnector = connector;
     } else {
       GameFi.walletConnector = new TonConnect(connector);
@@ -145,6 +149,14 @@ export abstract class GameFi {
     }
 
     return {connector: GameFi.walletConnector, client: GameFi.tonClient};
+  }
+
+  public static getInitOptions() {
+    if (GameFi.initOptions == null) {
+      throw new Error('Run "init" method before.');
+    }
+
+    return GameFi.initOptions;
   }
 
   public static getWalletConnector() {
@@ -173,5 +185,9 @@ export abstract class GameFi {
         }
       ]
     });
+  }
+
+  private static isTonConnectInstance(instance: unknown): instance is WalletConnector {
+    return instance instanceof TonConnect;
   }
 }

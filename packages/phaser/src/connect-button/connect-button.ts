@@ -14,11 +14,14 @@ import {hexToNumber, rawAddressToFriendly, smoothScale} from './utils';
 import {redirectToTelegram} from './tma-web-api';
 import {loadIcons} from './icons';
 
+export type ReturnParams = Partial<Parameters<typeof redirectToTelegram>[1]>;
+
 export interface ConnectWalletParams {
   style?: Styles;
   onWalletChange?: (wallet: Wallet | null) => void;
   onError: (error: Error | unknown) => void;
   language?: Locales;
+  returnParams?: ReturnParams;
 }
 
 export class ConnectWalletButton extends Phaser.GameObjects.Container {
@@ -42,7 +45,8 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
     x: number = 0,
     y: number = 0,
     params: ConnectWalletParams,
-    private readonly connector: WalletConnector
+    private readonly connector: WalletConnector,
+    private readonly returnParams: ReturnParams = {}
   ) {
     super(scene, x, y);
     this.params = params;
@@ -235,9 +239,9 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
       const connectUrl = this.connector.connect(this.connectionSource);
       if (connectUrl) {
         redirectToTelegram(connectUrl, {
-          returnStrategy: 'back',
-          twaReturnUrl: 'https://t.me/flappybirddevbot/flappybirddev',
-          forceRedirect: false
+          twaReturnUrl: this.returnParams.twaReturnUrl,
+          returnStrategy: this.returnParams.returnStrategy ?? 'back',
+          forceRedirect: this.returnParams.forceRedirect ?? false
         });
       }
     } catch (error) {

@@ -16,7 +16,8 @@ export class GameFi extends GameFiBase {
       options.phaserOptions.x,
       options.phaserOptions.y,
       options.buttonOptions,
-      GameFi.getWalletConnector()
+      GameFi.getWalletConnector(),
+      GameFi.getInitOptions().returnStrategy
     );
   }
 }
