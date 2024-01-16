@@ -75,6 +75,7 @@ class NftCollection {
 export interface GameFiInitialization {
   connector?: TonConnect | WalletConnectorOptions;
   client?: TonClient | TonClientOptions;
+  network?: 'mainnet' | 'testnet';
 }
 
 export abstract class GameFi {
@@ -120,7 +121,7 @@ export abstract class GameFi {
   }
 
   public static async init(options: GameFiInitialization = {}) {
-    const {connector, client} = options;
+    const {connector, client, network = 'testnet'} = options;
 
     if (connector instanceof TonConnect) {
       GameFi.walletConnector = connector;
@@ -133,7 +134,9 @@ export abstract class GameFi {
     } else {
       let clientOptions: TonClientOptions;
       if (client == null) {
-        const endpoint = await getHttpEndpoint();
+        const endpoint = await getHttpEndpoint({
+          network
+        });
         clientOptions = {endpoint};
       } else {
         clientOptions = client;

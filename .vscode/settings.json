@@ -8,6 +8,7 @@
     "editor.formatOnSave": true,
     "cSpell.words": [
         "consts",
+        "deeplink",
         "gamefi",
         "ipfs",
         "lefthook",
