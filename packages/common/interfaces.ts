@@ -1,3 +1,6 @@
+import {ParsedContent} from './content';
+import {ParsedNftContent} from './content-nft';
+
 export {
   SendTransactionRequest,
   SendTransactionResponse,
@@ -7,3 +10,6 @@ export {
   Wallet,
   Account
 } from '@tonconnect/sdk';
+
+export {NftContentData} from './content';
+export type NftContent = ParsedContent<ParsedNftContent>;
