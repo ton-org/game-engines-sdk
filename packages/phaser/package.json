@@ -9,6 +9,7 @@
     },
     "dependencies": {
         "@tonconnect/sdk": "^3.0.0",
+        "@tonconnect/ui": "^2.0.0",
         "@ton/ton": "^13.9.0",
         "@orbs-network/ton-access": "^2.3.3",
         "ua-parser-js": "^1.0.37"
