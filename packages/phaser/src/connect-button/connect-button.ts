@@ -1,4 +1,4 @@
-import {WalletConnector, Wallet, WalletConnectionSource} from '../../../common/interfaces';
+import {WalletConnector, Wallet} from '../../../common/interfaces';
 import {Locale} from './interfaces';
 import {Locales, Styles} from './types';
 import {DropdownMenu, DropdownMenuItem} from './dropdown';
@@ -16,12 +16,23 @@ import {loadIcons} from './icons';
 
 export type ReturnParams = Partial<Parameters<typeof redirectToTelegram>[1]>;
 
+export type WalletSource =
+  | 'telegram-wallet'
+  | 'tonkeeper'
+  | 'mytonwallet'
+  | 'openmask'
+  | 'tonhub'
+  | 'dewallet'
+  | 'xtonwallet'
+  | 'tonwallet';
+
 export interface ConnectWalletParams {
   style?: Styles;
   onWalletChange?: (wallet: Wallet | null) => void;
   onError: (error: Error | unknown) => void;
   language?: Locales;
   returnParams?: ReturnParams;
+  walletSource?: WalletSource;
 }
 
 export class ConnectWalletButton extends Phaser.GameObjects.Container {
@@ -33,7 +44,7 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
   buttonHeight: number;
   wallet: Wallet | null = null;
   params: ConnectWalletParams;
-  connectionSource: WalletConnectionSource;
+  connectionSourceName: WalletSource;
   unsubscribeFromConnector: () => void;
   dropdownMenu?: DropdownMenu;
   locale: Locale;
@@ -50,11 +61,7 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
   ) {
     super(scene, x, y);
     this.params = params;
-    // this.connectionSource = {jsBridgeKey: 'tonkeeper'};
-    this.connectionSource = {
-      bridgeUrl: 'https://bridge.tonapi.io/bridge',
-      universalLink: 'https://t.me/wallet?attach=wallet'
-    };
+    this.connectionSourceName = params.walletSource || 'telegram-wallet';
     this.loadAssets(scene);
 
     const locale = locales[params.language ?? 'en'];
@@ -232,11 +239,22 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
     }
   }
 
-  private connectWallet = () => {
+  private connectWallet = async () => {
     try {
+      const wallets = await this.connector.getWallets();
+      let wallet = wallets.find((wallet) => {
+        return wallet.appName === this.connectionSourceName;
+      });
+      if (wallet == null) {
+        wallet = wallets[0];
+      }
+      if (wallet == null) {
+        throw new Error('There is no compatible wallet source.');
+      }
+
       // todo disable button while waiting for the connection, now not working
       this.disable();
-      const connectUrl = this.connector.connect(this.connectionSource);
+      const connectUrl = this.connector.connect(wallet);
       if (connectUrl) {
         redirectToTelegram(connectUrl, {
           twaReturnUrl: this.returnParams.twaReturnUrl,
