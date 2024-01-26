@@ -30,7 +30,9 @@
         "strictPropertyInitialization": true,
         // Production specific
         "removeComments": true,
-        "sourceMap": false
+        "sourceMap": false,
+        // Optimizations
+        "skipLibCheck": true
     },
     "include": ["./packages"]
 }

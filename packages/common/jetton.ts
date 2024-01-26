@@ -6,13 +6,6 @@ import {AddressUtils, Convertor, createTransactionExpiration} from './utils';
  * Domain specific.
  */
 
-export interface TransferParams {
-  jetton: Address | string;
-  from: Address | string;
-  to: Address | string;
-  amount: number;
-}
-
 export interface DomainJettonMinter {
   totalSupply: bigint;
   mintable: boolean;
@@ -21,7 +14,7 @@ export interface DomainJettonMinter {
   jettonWalletCode: Cell;
 }
 
-export interface JettonRequestCommon {
+export interface DomainJettonTransferRequest {
   to: Address;
   amount: bigint;
   queryId?: bigint;
@@ -49,7 +42,7 @@ export class DomainJettonManager {
     };
   }
 
-  public createTransferPayload(request: JettonRequestCommon): Cell {
+  public createTransferPayload(request: DomainJettonTransferRequest): Cell {
     return beginCell()
       .storeUint(DomainJettonManager.transferOperationCode, 32)
       .storeUint(request.queryId ?? 0, 64)
@@ -62,9 +55,13 @@ export class DomainJettonManager {
       .endCell();
   }
 
-  public async getWalletAddress(owner: Address): Promise<Address> {
+  public createMessagePayload(message: string): Cell {
+    return beginCell().storeUint(0, 32).storeStringTail(message).endCell();
+  }
+
+  public async getWalletAddress(owner: Address, from: Address): Promise<Address> {
     const {stack} = await this.tonClient.runMethod(owner, 'get_wallet_address', [
-      {type: 'slice', cell: beginCell().storeAddress(owner).endCell()}
+      {type: 'slice', cell: beginCell().storeAddress(from).endCell()}
     ]);
 
     return stack.readAddress();
@@ -74,6 +71,19 @@ export class DomainJettonManager {
 /**
  * Client specific.
  */
+
+export interface JettonTransferRequest {
+  jetton: Address | string;
+  from: Address | string;
+  to: Address | string;
+  amount: number;
+  forward?: {
+    fee: number;
+    message: string;
+  };
+  customPayload?: string;
+}
+
 export class ClientJettonManager extends DomainJettonManager {
   constructor(
     tonClient: TonClient,
@@ -86,15 +96,28 @@ export class ClientJettonManager extends DomainJettonManager {
     jetton,
     from,
     to,
-    amount
-  }: TransferParams): Promise<SendTransactionResponse> {
-    const payload = this.createTransferPayload({
+    amount,
+    forward,
+    customPayload
+  }: JettonTransferRequest): Promise<SendTransactionResponse> {
+    const payloadData: DomainJettonTransferRequest = {
       to: AddressUtils.toObject(to),
-      amount: Convertor.toNano(amount),
+      amount: BigInt(amount),
       responseDestination: AddressUtils.toObject(from)
-    });
+    };
+    if (customPayload != null) {
+      payloadData.customPayload = this.createMessagePayload(customPayload);
+    }
+    if (forward != null) {
+      payloadData.forwardAmount = BigInt(forward.fee);
+      payloadData.forwardPayload = this.createMessagePayload(forward.message);
+    }
+    const payload = this.createTransferPayload(payloadData);
 
-    const walletAddress = await this.getWalletAddress(AddressUtils.toObject(jetton));
+    const walletAddress = await this.getWalletAddress(
+      AddressUtils.toObject(jetton),
+      AddressUtils.toObject(from)
+    );
 
     return this.walletConnector.sendTransaction({
       validUntil: createTransactionExpiration(),
@@ -140,5 +163,9 @@ export class JettonManager {
       jettonContent: data.jettonContent,
       jettonWalletCode: data.jettonWalletCode
     };
+  }
+
+  public transfer(params: JettonTransferRequest): Promise<SendTransactionResponse> {
+    return this.manager.transfer(params);
   }
 }
