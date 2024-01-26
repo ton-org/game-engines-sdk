@@ -8,7 +8,8 @@ export {
   TonConnectOptions as WalletConnectorOptions,
   WalletConnectionSource,
   Wallet,
-  Account
+  Account,
+  ITonConnect
 } from '@tonconnect/sdk';
 
 export {NftContentData} from './content';

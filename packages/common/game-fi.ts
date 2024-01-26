@@ -1,4 +1,10 @@
-import {TonClient, TonConnect, getHttpEndpoint, TonClientOptions, TonConnectUI} from './external';
+import {
+  TonClient,
+  TonConnect,
+  getHttpEndpoint,
+  TonClientOptions,
+  TonConnectUIAdapter
+} from './external';
 import {NftItemManager} from './nft-item';
 import {NftCollectionManager} from './nft-collection';
 import {
@@ -6,7 +12,8 @@ import {
   WalletConnectorOptions,
   Wallet,
   Account,
-  SendTransactionResponse
+  SendTransactionResponse,
+  ITonConnect
 } from './interfaces';
 import {AddressUtils, Convertor, createTransactionExpiration} from './utils';
 import {AmountInTon} from './types';
@@ -15,14 +22,13 @@ import {JettonManager} from './jetton';
 
 export interface GameFiInitialization {
   network?: 'mainnet' | 'testnet';
-  connector?: TonConnectUI | WalletConnector | WalletConnectorOptions;
+  connector?: TonConnectUIAdapter | WalletConnector | WalletConnectorOptions;
   client?: TonClient | TonClientOptions;
   returnStrategy?: ReturnParams;
 }
 
 export abstract class GameFi {
   private static walletConnector: WalletConnector | null = null;
-  private static walletConnectorUi: TonConnectUI | null = null;
   private static tonClient: TonClient | null = null;
   private static initOptions: GameFiInitialization | null = null;
   private readonly tonClient: TonClient;
@@ -74,14 +80,11 @@ export abstract class GameFi {
     const {connector, client, network = 'testnet'} = options;
 
     if (GameFi.isTonConnectUiInstance(connector)) {
-      GameFi.walletConnector = connector.connector;
-      GameFi.walletConnectorUi = connector;
-    } else if (GameFi.isTonConnectInstance(connector)) {
       GameFi.walletConnector = connector;
-      GameFi.walletConnectorUi = GameFi.createConnectUiWorkaround();
+    } else if (GameFi.isTonConnectInstance(connector)) {
+      GameFi.walletConnector = GameFi.createConnectUiWorkaround(connector);
     } else {
-      GameFi.walletConnector = new TonConnect(connector);
-      GameFi.walletConnectorUi = GameFi.createConnectUiWorkaround();
+      GameFi.walletConnector = GameFi.createConnectUiWorkaround(new TonConnect(connector));
     }
 
     if (client instanceof TonClient) {
@@ -116,14 +119,6 @@ export abstract class GameFi {
     return GameFi.walletConnector;
   }
 
-  public static getWalletConnectorUi(): TonConnectUI {
-    if (GameFi.walletConnectorUi == null) {
-      throw new Error('Create the connector via "createWalletConnector" method first.');
-    }
-
-    return GameFi.walletConnectorUi;
-  }
-
   public static getTonClient(): TonClient {
     if (GameFi.tonClient == null) {
       throw new Error('Create the TonClient via "createTonClient" method first.');
@@ -139,9 +134,7 @@ export abstract class GameFi {
     to: string;
     amount: AmountInTon;
   }): Promise<SendTransactionResponse> {
-    const connectorUi = GameFi.getWalletConnectorUi();
-
-    return connectorUi.sendTransaction({
+    return this.walletConnector.sendTransaction({
       validUntil: createTransactionExpiration(),
       messages: [
         {
@@ -152,7 +145,7 @@ export abstract class GameFi {
     });
   }
 
-  private static isTonConnectUiInstance(instance: unknown): instance is TonConnectUI {
+  private static isTonConnectUiInstance(instance: unknown): instance is TonConnectUIAdapter {
     // by some reason instanceof TonConnectUI returns false
     // so we need implement the check differently
     return typeof instance === 'object' && instance != null && 'openModal' in instance;
@@ -162,7 +155,7 @@ export abstract class GameFi {
     return instance instanceof TonConnect;
   }
 
-  private static createConnectUiWorkaround(): TonConnectUI {
+  private static createConnectUiWorkaround(connector: ITonConnect): WalletConnector {
     // we need to split TonConnectUI to logic and UI parts
     // to reuse logic in any package
     // until then use TonConnectUI under the hood
@@ -177,8 +170,8 @@ export abstract class GameFi {
     widgetRoot.style.display = 'none';
     document.body.appendChild(widgetRoot);
 
-    return new TonConnectUI({
-      connector: GameFi.getWalletConnector(),
+    return new TonConnectUIAdapter({
+      connector: connector,
       restoreConnection: false,
       buttonRootId: buttonRoot.id,
       widgetRootId: widgetRoot.id
