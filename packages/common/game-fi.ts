@@ -11,7 +11,6 @@ import {
   WalletConnector,
   WalletConnectorOptions,
   Wallet,
-  Account,
   SendTransactionResponse,
   ITonConnect
 } from './interfaces';
@@ -22,7 +21,7 @@ import {JettonManager} from './jetton';
 
 export interface GameFiInitialization {
   network?: 'mainnet' | 'testnet';
-  connector?: TonConnectUIAdapter | WalletConnector | WalletConnectorOptions;
+  connector?: TonConnectUIAdapter | WalletConnectorOptions;
   client?: TonClient | TonClientOptions;
   returnStrategy?: ReturnParams;
 }
@@ -38,8 +37,6 @@ export abstract class GameFi {
     convertor: Convertor
   };
   public readonly walletConnector: WalletConnector;
-  public readonly wallet: Wallet;
-  public readonly account: Account;
   public readonly nft: {
     collection: NftCollectionManager;
     item: NftItemManager;
@@ -48,19 +45,9 @@ export abstract class GameFi {
 
   constructor() {
     const walletConnector = GameFi.getWalletConnector();
-    if (walletConnector.wallet == null) {
-      throw new Error('Connect a wallet before using GameFi.');
-    }
-
     const tonClient = GameFi.getTonClient();
-    if (tonClient == null) {
-      throw new Error('Create TonClient before using GameFi.');
-    }
 
     this.walletConnector = walletConnector;
-    this.wallet = walletConnector.wallet;
-    this.account = walletConnector.wallet.account;
-
     this.tonClient = tonClient;
 
     this.nft = {
@@ -68,6 +55,14 @@ export abstract class GameFi {
       collection: new NftCollectionManager(this.tonClient)
     };
     this.jetton = new JettonManager(this.tonClient, this.walletConnector);
+  }
+
+  public get wallet(): Wallet {
+    if (this.walletConnector.wallet == null) {
+      throw new Error('Connect a wallet before using it.');
+    }
+
+    return this.walletConnector.wallet;
   }
 
   public static async init(options: GameFiInitialization = {}): Promise<void> {
@@ -105,7 +100,7 @@ export abstract class GameFi {
 
   public static getInitOptions() {
     if (GameFi.initOptions == null) {
-      throw new Error('Run "init" method before.');
+      throw new Error('Run "init" method first.');
     }
 
     return GameFi.initOptions;
@@ -113,7 +108,7 @@ export abstract class GameFi {
 
   public static getWalletConnector(): WalletConnector {
     if (GameFi.walletConnector == null) {
-      throw new Error('Create the connector via "createWalletConnector" method first.');
+      throw new Error('Run "init" method first.');
     }
 
     return GameFi.walletConnector;
@@ -121,7 +116,7 @@ export abstract class GameFi {
 
   public static getTonClient(): TonClient {
     if (GameFi.tonClient == null) {
-      throw new Error('Create the TonClient via "createTonClient" method first.');
+      throw new Error('Run "init" method first.');
     }
 
     return GameFi.tonClient;
@@ -194,7 +189,6 @@ export abstract class GameFi {
 
     return new TonConnectUIAdapter({
       connector: connector,
-      restoreConnection: false,
       buttonRootId: buttonRoot.id,
       widgetRootId: widgetRoot.id
     });
