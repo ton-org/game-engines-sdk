@@ -145,6 +145,28 @@ export abstract class GameFi {
     });
   }
 
+  public async restoreWalletConnection(
+    ...params: Parameters<WalletConnector['onStatusChange']>
+  ): Promise<() => void> {
+    const unsubscribe = this.walletConnector.onStatusChange(...params);
+
+    // avoid multiple restores, it causes errors
+    // we handle the case to user doesn't think twice
+    if (this.walletConnector.connected) {
+      params[0](this.walletConnector.wallet);
+    } else {
+      await this.walletConnector.restoreConnection();
+    }
+
+    // native behavior doesn't trigger change if wallet not connected on initial restore
+    // we will trigger it manually, to user didn't handle the case
+    if (!this.walletConnector.connected) {
+      params[0](null);
+    }
+
+    return unsubscribe;
+  }
+
   private static isTonConnectUiInstance(instance: unknown): instance is TonConnectUIAdapter {
     // by some reason instanceof TonConnectUI returns false
     // so we need implement the check differently
