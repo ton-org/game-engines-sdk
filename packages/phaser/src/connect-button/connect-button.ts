@@ -11,10 +11,7 @@ import {
   LIGHT_DISCONNECT
 } from './consts';
 import {hexToNumber, rawAddressToFriendly, smoothScale} from './utils';
-import {redirectToTelegram} from './tma-web-api';
 import {loadIcons} from './icons';
-
-export type ReturnParams = Partial<Parameters<typeof redirectToTelegram>[1]>;
 
 export type WalletSource =
   | 'telegram-wallet'
@@ -31,7 +28,6 @@ export interface ConnectWalletParams {
   onWalletChange?: (wallet: Wallet | null) => void;
   onError: (error: Error | unknown) => void;
   language?: Locales;
-  returnParams?: ReturnParams;
   walletSource?: WalletSource;
 }
 
@@ -56,8 +52,7 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
     x: number = 0,
     y: number = 0,
     params: ConnectWalletParams,
-    private readonly connector: WalletConnector,
-    private readonly returnParams: ReturnParams = {}
+    private readonly connector: WalletConnector
   ) {
     super(scene, x, y);
     this.params = params;
@@ -140,7 +135,7 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
 
     textObject.setText('...');
 
-    this.unsubscribeFromConnector = this.connector.onStatusChange((wallet) => {
+    const walletChanged = (wallet: Wallet | null) => {
       this.wallet = wallet;
 
       btnCtr.off('pointerdown', this.connectWallet);
@@ -162,13 +157,12 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
       if (this.params.onWalletChange) {
         this.params.onWalletChange(wallet);
       }
-    });
+    };
 
-    this.connector.restoreConnection().then(() => {
-      if (this.wallet === null) {
-        textObject.setText(locale.connectWallet);
-        btnCtr.on('pointerdown', this.connectWallet);
-        this.setSchema(buttonDesign.default);
+    this.unsubscribeFromConnector = this.connector.onStatusChange(walletChanged);
+    this.connector.connectionRestored.then((connected) => {
+      if (!connected) {
+        walletChanged(null);
       }
 
       this.enable();
@@ -241,27 +235,8 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
 
   private connectWallet = async () => {
     try {
-      const wallets = await this.connector.getWallets();
-      let wallet = wallets.find((wallet) => {
-        return wallet.appName === this.connectionSourceName;
-      });
-      if (wallet == null) {
-        wallet = wallets[0];
-      }
-      if (wallet == null) {
-        throw new Error('There is no compatible wallet source.');
-      }
-
-      // todo disable button while waiting for the connection, now not working
       this.disable();
-      const connectUrl = this.connector.connect(wallet);
-      if (connectUrl) {
-        redirectToTelegram(connectUrl, {
-          twaReturnUrl: this.returnParams.twaReturnUrl,
-          returnStrategy: this.returnParams.returnStrategy ?? 'back',
-          forceRedirect: this.returnParams.forceRedirect ?? false
-        });
-      }
+      await this.connector.openSingleWalletModal(this.connectionSourceName);
     } catch (error) {
       this.params.onError(error);
     } finally {
@@ -350,9 +325,8 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
   public override destroy() {
     this.unsubscribeFromConnector();
     this.cancelIconChange();
-    // todo Will the super destroy() call remove all listeners?
-    /* this.buttonContainer.removeAllListeners();
-    this.buttonContainer.destroy(); */
+    this.buttonContainer.removeAllListeners();
+    this.buttonContainer.destroy();
     super.destroy();
   }
 }

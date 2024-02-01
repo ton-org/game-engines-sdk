@@ -1,5 +1,6 @@
 export * from '../../common/interfaces';
-export {TonConnectUIAdapter} from '../../common/external';
+export * from '../../common/external';
+export * from '../../common/utils';
 export * from './connect-button/connect-button';
 export * from './connect-button/consts';
 export * from './connect-button/dropdown';

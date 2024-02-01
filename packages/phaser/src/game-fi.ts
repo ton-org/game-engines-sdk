@@ -1,9 +1,13 @@
 import type Phaser from 'phaser';
 import {ConnectWalletButton, ConnectWalletParams} from './connect-button/connect-button';
-import {GameFi as GameFiBase} from '../../common/game-fi';
+import {GameFi as GameFiBase, GameFiInitialization} from '../../common/game-fi';
 
 export class GameFi extends GameFiBase {
-  public static createConnectButton(options: {
+  public static async create(params: GameFiInitialization = {}): Promise<GameFi> {
+    return new GameFi(await GameFi.createDependencies(params));
+  }
+
+  public createConnectButton(options: {
     phaserOptions: {
       scene: Phaser.Scene;
       x: number;
@@ -16,8 +20,7 @@ export class GameFi extends GameFiBase {
       options.phaserOptions.x,
       options.phaserOptions.y,
       options.buttonOptions,
-      GameFi.getWalletConnector(),
-      GameFi.getInitOptions().returnStrategy
+      this.walletConnector
     );
   }
 }

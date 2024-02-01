@@ -1,60 +1,61 @@
-import {
-  TonClient,
-  TonConnect,
-  getHttpEndpoint,
-  TonClientOptions,
-  TonConnectUIAdapter
-} from './external';
-import {NftItemManager} from './nft-item';
-import {NftCollectionManager} from './nft-collection';
+import {TonClient, getHttpEndpoint, TonClientOptions, TonConnectUI, Address} from './external';
 import {
   WalletConnector,
   WalletConnectorOptions,
   Wallet,
   SendTransactionResponse,
-  ITonConnect
+  Account
 } from './interfaces';
-import {AddressUtils, Convertor, createTransactionExpiration} from './utils';
-import {AmountInTon} from './types';
-import {ReturnParams} from '../phaser/src/connect-button/connect-button';
+import {Convertor, createTransactionExpiration} from './utils';
+import {NftCollectionManager} from './nft-collection';
+import {NftItemManager} from './nft-item';
 import {JettonManager} from './jetton';
 
 export interface GameFiInitialization {
   network?: 'mainnet' | 'testnet';
-  connector?: TonConnectUIAdapter | WalletConnectorOptions;
+  connector?: WalletConnector | WalletConnectorOptions;
   client?: TonClient | TonClientOptions;
-  returnStrategy?: ReturnParams;
+}
+
+// todo handle queryId,customPayload, forwardAmount, forwardPayload params
+export interface NftTransferParams {
+  nft: Address | string;
+  from: Address | string;
+  to: Address | string;
+}
+
+export interface JettonTransferRequest {
+  jetton: Address | string;
+  from: Address | string;
+  to: Address | string;
+  amount: number;
+  forward?: {
+    fee: number;
+    message: string;
+  };
+  customPayload?: string;
+}
+
+export interface GameFiConstructorParams {
+  walletConnector: WalletConnector;
+  tonClient: TonClient;
 }
 
 export abstract class GameFi {
-  private static walletConnector: WalletConnector | null = null;
-  private static tonClient: TonClient | null = null;
-  private static initOptions: GameFiInitialization | null = null;
-  private readonly tonClient: TonClient;
-
-  public static readonly utils = {
-    address: AddressUtils,
-    convertor: Convertor
-  };
   public readonly walletConnector: WalletConnector;
-  public readonly nft: {
-    collection: NftCollectionManager;
-    item: NftItemManager;
-  };
-  public readonly jetton: JettonManager;
+  public readonly tonClient: TonClient;
 
-  constructor() {
-    const walletConnector = GameFi.getWalletConnector();
-    const tonClient = GameFi.getTonClient();
+  private readonly nftCollectionManager: NftCollectionManager;
+  private readonly nftItemManager: NftItemManager;
+  private readonly jettonManager: JettonManager;
 
-    this.walletConnector = walletConnector;
-    this.tonClient = tonClient;
+  constructor(params: GameFiConstructorParams) {
+    this.walletConnector = params.walletConnector;
+    this.tonClient = params.tonClient;
 
-    this.nft = {
-      item: new NftItemManager(this.tonClient, this.walletConnector),
-      collection: new NftCollectionManager(this.tonClient)
-    };
-    this.jetton = new JettonManager(this.tonClient, this.walletConnector);
+    this.nftCollectionManager = new NftCollectionManager(this.tonClient);
+    this.nftItemManager = new NftItemManager(this.tonClient, this.walletConnector);
+    this.jettonManager = new JettonManager(this.tonClient, this.walletConnector);
   }
 
   public get wallet(): Wallet {
@@ -65,25 +66,26 @@ export abstract class GameFi {
     return this.walletConnector.wallet;
   }
 
-  public static async init(options: GameFiInitialization = {}): Promise<void> {
-    // avoid secondary initialization
-    if (GameFi.walletConnector != null) {
-      return;
-    }
+  public get walletAccount(): Account {
+    return this.wallet.account;
+  }
 
-    GameFi.initOptions = options;
-    const {connector, client, network = 'testnet'} = options;
+  public get walletAddress(): string {
+    return this.wallet.account.address;
+  }
 
-    if (GameFi.isTonConnectUiInstance(connector)) {
-      GameFi.walletConnector = connector;
-    } else if (GameFi.isTonConnectInstance(connector)) {
-      GameFi.walletConnector = GameFi.createConnectUiWorkaround(connector);
-    } else {
-      GameFi.walletConnector = GameFi.createConnectUiWorkaround(new TonConnect(connector));
-    }
+  protected static async createDependencies(
+    params: GameFiInitialization = {}
+  ): Promise<GameFiConstructorParams> {
+    const {connector, client, network = 'testnet'} = params;
 
+    const walletConnector = GameFi.isTonConnectUiInstance(connector)
+      ? connector
+      : GameFi.createConnectUiWorkaround(connector);
+
+    let tonClient: TonClient;
     if (client instanceof TonClient) {
-      GameFi.tonClient = client;
+      tonClient = client;
     } else {
       let clientOptions: TonClientOptions;
       if (client == null) {
@@ -94,41 +96,13 @@ export abstract class GameFi {
       } else {
         clientOptions = client;
       }
-      GameFi.tonClient = new TonClient(clientOptions);
-    }
-  }
-
-  public static getInitOptions() {
-    if (GameFi.initOptions == null) {
-      throw new Error('Run "init" method first.');
+      tonClient = new TonClient(clientOptions);
     }
 
-    return GameFi.initOptions;
+    return {walletConnector, tonClient};
   }
 
-  public static getWalletConnector(): WalletConnector {
-    if (GameFi.walletConnector == null) {
-      throw new Error('Run "init" method first.');
-    }
-
-    return GameFi.walletConnector;
-  }
-
-  public static getTonClient(): TonClient {
-    if (GameFi.tonClient == null) {
-      throw new Error('Run "init" method first.');
-    }
-
-    return GameFi.tonClient;
-  }
-
-  public async pay({
-    to,
-    amount
-  }: {
-    to: string;
-    amount: AmountInTon;
-  }): Promise<SendTransactionResponse> {
+  public async pay({to, amount}: {to: string; amount: number}): Promise<SendTransactionResponse> {
     return this.walletConnector.sendTransaction({
       validUntil: createTransactionExpiration(),
       messages: [
@@ -140,55 +114,92 @@ export abstract class GameFi {
     });
   }
 
-  public async restoreWalletConnection(
-    ...params: Parameters<WalletConnector['onStatusChange']>
-  ): Promise<() => void> {
+  /** NFT collection methods */
+  public getCollectionData(address: Address | string) {
+    return this.nftCollectionManager.getData(address);
+  }
+
+  public async getNftAddressByIndex(
+    collectionAddress: Address | string,
+    itemIndex: number | bigint
+  ) {
+    return this.nftCollectionManager.getNftAddressByIndex(collectionAddress, itemIndex);
+  }
+
+  public async getNftItemByIndex(collectionAddress: Address | string, itemIndex: number | bigint) {
+    const nftAddress = await this.nftCollectionManager.getNftAddressByIndex(
+      collectionAddress,
+      itemIndex
+    );
+
+    return this.nftItemManager.get(nftAddress);
+  }
+
+  /** NFT item methods */
+  public getNftItem(address: Address | string) {
+    return this.nftItemManager.get(address);
+  }
+
+  public transferNftItem(params: NftTransferParams) {
+    return this.nftItemManager.transfer(params);
+  }
+
+  /** Jetton methods */
+  public getJetton(address: Address | string) {
+    return this.jettonManager.getData(address);
+  }
+
+  public async transferJetton(params: JettonTransferRequest) {
+    return this.jettonManager.transfer(params);
+  }
+
+  public onWalletChange(...params: Parameters<WalletConnector['onStatusChange']>): () => void {
     const unsubscribe = this.walletConnector.onStatusChange(...params);
 
-    // avoid multiple restores, it causes errors
-    // we handle the case to user doesn't think twice
-    if (this.walletConnector.connected) {
-      params[0](this.walletConnector.wallet);
-    } else {
-      await this.walletConnector.restoreConnection();
-    }
-
-    // native behavior doesn't trigger change if wallet not connected on initial restore
-    // we will trigger it manually, to user didn't handle the case
-    if (!this.walletConnector.connected) {
-      params[0](null);
-    }
+    // by default onStatusChange doesn't trigger when no wallet to restore
+    // do manually trigger to user doesn't need to handle the case by himself
+    this.walletConnector.connectionRestored.then((connected) => {
+      if (!connected) {
+        params[0](null);
+      }
+    });
 
     return unsubscribe;
   }
 
-  private static isTonConnectUiInstance(instance: unknown): instance is TonConnectUIAdapter {
-    // by some reason instanceof TonConnectUI returns false
+  protected static isTonConnectUiInstance(instance: unknown): instance is WalletConnector {
+    // because TonConnectUI cleared outside of the lib, in a consumer app
+    // instance instanceof TonConnectUI returns false
     // so we need implement the check differently
+    // todo figure out how to fix
     return typeof instance === 'object' && instance != null && 'openModal' in instance;
   }
 
-  private static isTonConnectInstance(instance: unknown): instance is WalletConnector {
-    return instance instanceof TonConnect;
-  }
-
-  private static createConnectUiWorkaround(connector: ITonConnect): WalletConnector {
-    // we need to split TonConnectUI to logic and UI parts
-    // to reuse logic in any package
-    // until then use TonConnectUI under the hood
+  protected static createConnectUiWorkaround(
+    options: WalletConnectorOptions = {}
+  ): WalletConnector {
+    // we need 100% TonConnectUI functionality, but without visual parts
+    // to reuse the logic, but not to implement fork, use the workaround
     // todo remove this workaround
+    const hide = (element: HTMLElement) => {
+      element.style.overflow = 'hidden';
+      element.style.display = 'none';
+      element.style.position = 'absolute';
+      element.style.left = '-9999px';
+    };
+
     const buttonRoot = document.createElement('div');
     buttonRoot.id = '__ton-connect-ui--button-root';
-    buttonRoot.style.display = 'none';
+    hide(buttonRoot);
     document.body.appendChild(buttonRoot);
 
     const widgetRoot = document.createElement('div');
     widgetRoot.id = '__ton-connect-ui--widget-root';
-    widgetRoot.style.display = 'none';
+    hide(widgetRoot);
     document.body.appendChild(widgetRoot);
 
-    return new TonConnectUIAdapter({
-      connector: connector,
+    return new TonConnectUI({
+      ...options,
       buttonRootId: buttonRoot.id,
       widgetRootId: widgetRoot.id
     });
