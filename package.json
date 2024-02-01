@@ -2,6 +2,9 @@
     "name": "ton-gamefi",
     "private": true,
     "workspaces": ["packages/phaser"],
+    "scripts": {
+        "check-types": "tsc --noEmit"
+    },
     "devDependencies": {
         "@types/node": "^20.10.7",
         "lefthook": "^1.5.5",

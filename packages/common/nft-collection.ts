@@ -56,57 +56,39 @@ export class DomainNftCollectionManager {
 
 /** Client specific */
 
-export class ClientNftCollectionManager extends DomainNftCollectionManager {}
-
-/** GameFi specific */
-
 export interface NftCollection {
-  nextItemIndex: number;
+  nextItemIndex: bigint;
   content: string;
-  owner: string;
-  raw: DomainNftCollection;
+  owner: Address | null;
 }
 
 export class NftCollectionManager {
-  private readonly domainManager: ClientNftCollectionManager;
+  private readonly domainManager: DomainNftCollectionManager;
 
   constructor(private readonly tonClient: TonClient) {
-    this.domainManager = new ClientNftCollectionManager(this.tonClient);
+    this.domainManager = new DomainNftCollectionManager(this.tonClient);
   }
 
   public async getData(address: Address | string): Promise<NftCollection> {
     const domainData = await this.domainManager.getData(address);
 
     return {
-      nextItemIndex: Number(domainData.nextItemIndex),
+      nextItemIndex: domainData.nextItemIndex,
+      // todo load
       content: domainData.content.toBoc().toString('base64'),
-      owner: domainData.owner ? AddressUtils.toString(domainData.owner) : '',
-      raw: domainData
+      owner: domainData.owner
     };
   }
 
   public async getNftAddressByIndex(
     collection: Address | string,
     itemIndex: number | bigint
-  ): Promise<string> {
+  ): Promise<Address> {
     const address = await this.domainManager.getNftAddressByIndex(
       AddressUtils.toObject(collection),
       BigInt(itemIndex)
     );
 
-    return AddressUtils.toString(address);
-  }
-
-  public async getNftContent(
-    collection: Address | string,
-    itemIndex: number | bigint,
-    // todo load and return meta data instead
-    itemIndividualContent: Cell
-  ) {
-    return this.domainManager.getNftContent(
-      AddressUtils.toObject(collection),
-      BigInt(itemIndex),
-      itemIndividualContent
-    );
+    return address;
   }
 }

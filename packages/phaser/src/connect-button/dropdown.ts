@@ -76,11 +76,9 @@ export class DropdownMenuItem extends Phaser.GameObjects.Container {
       smoothScale(scene.tweens, this, 1, 125);
     });
     button.on('pointerdown', () => {
-      console.log('down');
       smoothScale(scene.tweens, this, 0.98, 125);
     });
     button.on('pointerup', () => {
-      console.log('up');
       smoothScale(scene.tweens, this, 1, 125);
     });
     this.button = button;

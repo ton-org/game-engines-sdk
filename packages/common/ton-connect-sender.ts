@@ -1,5 +1,12 @@
-import {type TonConnectUI as TonConnectUI, Address, beginCell} from './external';
-import {Sender, SenderArguments, SendMode, storeStateInit} from '@ton/core';
+import {
+  type TonConnectUI,
+  Address,
+  beginCell,
+  Sender,
+  SenderArguments,
+  SendMode,
+  storeStateInit
+} from './external';
 import {SendTransactionRequest} from './interfaces';
 
 export class TonConnectSender implements Sender {

@@ -1,61 +1,64 @@
 import {TonClient, getHttpEndpoint, TonClientOptions, TonConnectUI, Address} from './external';
-import {
-  WalletConnector,
-  WalletConnectorOptions,
-  Wallet,
-  SendTransactionResponse,
-  Account
-} from './interfaces';
-import {Convertor, createTransactionExpiration} from './utils';
+import {WalletConnector, WalletConnectorOptions, Wallet, Account} from './interfaces';
+import {TonConnectSender} from './ton-connect-sender';
 import {NftCollectionManager} from './nft-collection';
-import {NftItemManager} from './nft-item';
-import {JettonManager} from './jetton';
+import {NftItemManager, NftTransferRequest} from './nft-item';
+import {JettonManager, JettonTransferRequest} from './jetton';
+import {PaymentManager, TonTransferRequest} from './payment';
 
-export interface GameFiInitialization {
-  network?: 'mainnet' | 'testnet';
+export type NftTransferParams = Omit<NftTransferRequest, 'from'>;
+export type SendParams = Omit<TonTransferRequest, 'from'> | Omit<JettonTransferRequest, 'from'>;
+export type BuyParams =
+  | Omit<TonTransferRequest, 'from' | 'to'>
+  | Omit<JettonTransferRequest, 'from' | 'to'>;
+
+export type Network = 'mainnet' | 'testnet';
+
+export interface MerchantInitialization {
+  tonAddress: Address | string;
+  jettonAddress: Address | string;
+}
+
+export interface GameFiInitializationParams {
+  network?: Network;
   connector?: WalletConnector | WalletConnectorOptions;
   client?: TonClient | TonClientOptions;
+  merchant?: MerchantInitialization;
 }
 
-// todo handle queryId,customPayload, forwardAmount, forwardPayload params
-export interface NftTransferParams {
-  nft: Address | string;
-  from: Address | string;
-  to: Address | string;
-}
-
-export interface JettonTransferRequest {
-  jetton: Address | string;
-  from: Address | string;
-  to: Address | string;
-  amount: number;
-  forward?: {
-    fee: number;
-    message: string;
-  };
-  customPayload?: string;
+export interface Merchant {
+  tonAddress: Address;
+  jettonAddress: Address;
 }
 
 export interface GameFiConstructorParams {
   walletConnector: WalletConnector;
   tonClient: TonClient;
+  merchant?: Merchant;
 }
 
 export abstract class GameFi {
   public readonly walletConnector: WalletConnector;
   public readonly tonClient: TonClient;
+  public readonly merchant?: Merchant;
 
   private readonly nftCollectionManager: NftCollectionManager;
   private readonly nftItemManager: NftItemManager;
   private readonly jettonManager: JettonManager;
+  private readonly paymentManager: PaymentManager;
 
   constructor(params: GameFiConstructorParams) {
     this.walletConnector = params.walletConnector;
     this.tonClient = params.tonClient;
+    if (params.merchant != null) {
+      this.merchant = params.merchant;
+    }
 
+    const transactionSender = new TonConnectSender(this.walletConnector);
     this.nftCollectionManager = new NftCollectionManager(this.tonClient);
-    this.nftItemManager = new NftItemManager(this.tonClient, this.walletConnector);
-    this.jettonManager = new JettonManager(this.tonClient, this.walletConnector);
+    this.nftItemManager = new NftItemManager(this.tonClient, transactionSender);
+    this.jettonManager = new JettonManager(this.tonClient, transactionSender);
+    this.paymentManager = new PaymentManager(this.jettonManager, transactionSender);
   }
 
   public get wallet(): Wallet {
@@ -70,12 +73,32 @@ export abstract class GameFi {
     return this.wallet.account;
   }
 
-  public get walletAddress(): string {
-    return this.wallet.account.address;
+  public get walletAddress(): Address {
+    return Address.parse(this.wallet.account.address);
+  }
+
+  public get merchantAddress(): Address {
+    if (this.merchant == null || this.merchant.tonAddress == null) {
+      throw new Error(
+        'To make payments pass with TON "merchant.tonAddress" parameter to "GameFi.create" method.'
+      );
+    }
+
+    return this.merchant.tonAddress;
+  }
+
+  public get merchantJettonAddress(): Address {
+    if (this.merchant == null || this.merchant.tonAddress == null) {
+      throw new Error(
+        'To make payments with jetton pass "merchant.jettonAddress" parameter to "GameFi.create" method.'
+      );
+    }
+
+    return this.merchant.tonAddress;
   }
 
   protected static async createDependencies(
-    params: GameFiInitialization = {}
+    params: GameFiInitializationParams = {}
   ): Promise<GameFiConstructorParams> {
     const {connector, client, network = 'testnet'} = params;
 
@@ -102,16 +125,16 @@ export abstract class GameFi {
     return {walletConnector, tonClient};
   }
 
-  public async pay({to, amount}: {to: string; amount: number}): Promise<SendTransactionResponse> {
-    return this.walletConnector.sendTransaction({
-      validUntil: createTransactionExpiration(),
-      messages: [
-        {
-          address: to,
-          amount: Convertor.toNano(amount).toString()
-        }
-      ]
+  public buy(params: BuyParams): Promise<void> {
+    return this.paymentManager.transfer({
+      ...params,
+      from: this.walletAddress,
+      to: 'jetton' in params ? this.merchantJettonAddress : this.merchantAddress
     });
+  }
+
+  public send(params: SendParams): Promise<void> {
+    return this.paymentManager.transfer({...params, from: this.walletAddress});
   }
 
   /** NFT collection methods */
@@ -132,16 +155,16 @@ export abstract class GameFi {
       itemIndex
     );
 
-    return this.nftItemManager.get(nftAddress);
+    return this.nftItemManager.getData(nftAddress);
   }
 
   /** NFT item methods */
   public getNftItem(address: Address | string) {
-    return this.nftItemManager.get(address);
+    return this.nftItemManager.getData(address);
   }
 
   public transferNftItem(params: NftTransferParams) {
-    return this.nftItemManager.transfer(params);
+    return this.nftItemManager.transfer({...params, from: this.walletAddress});
   }
 
   /** Jetton methods */
@@ -149,8 +172,8 @@ export abstract class GameFi {
     return this.jettonManager.getData(address);
   }
 
-  public async transferJetton(params: JettonTransferRequest) {
-    return this.jettonManager.transfer(params);
+  public async transferJetton(params: Omit<JettonTransferRequest, 'from'>) {
+    return this.jettonManager.transfer({...params, from: this.walletAddress});
   }
 
   public onWalletChange(...params: Parameters<WalletConnector['onStatusChange']>): () => void {

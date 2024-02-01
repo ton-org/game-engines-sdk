@@ -4,3 +4,8 @@ pre-commit:
     prettier:
       glob: '*.{js,jsx,ts,tsx,json,yml}'
       run: npx prettier --write {staged_files} && git add {staged_files}
+pre-push:
+  parallel: true
+  commands:
+    typescript:
+      run: npm run check-types

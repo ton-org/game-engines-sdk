@@ -1,6 +1,5 @@
-import {Address, Cell, TonClient, beginCell} from './external';
-import {SendTransactionResponse, WalletConnector} from './interfaces';
-import {AddressUtils, Convertor, createTransactionExpiration} from './utils';
+import {Address, Cell, Sender, TonClient, beginCell} from './external';
+import {AddressUtils, Convertor} from './utils';
 
 /**
  * Domain specific.
@@ -76,20 +75,26 @@ export interface JettonTransferRequest {
   jetton: Address | string;
   from: Address | string;
   to: Address | string;
-  amount: number;
-  forward?: {
-    fee: number;
-    message: string;
-  };
+  amount: number | bigint;
   customPayload?: string;
+  forwardFee?: number | bigint;
+  forwardMessage?: string;
 }
 
-export class ClientJettonManager extends DomainJettonManager {
+export interface JettonMinter extends DomainJettonMinter {}
+
+export class JettonManager {
+  private readonly manager: DomainJettonManager;
+
   constructor(
     tonClient: TonClient,
-    protected readonly walletConnector: WalletConnector
+    private readonly sender: Sender
   ) {
-    super(tonClient);
+    this.manager = new DomainJettonManager(tonClient);
+  }
+
+  public async getData(address: Address | string): Promise<JettonMinter> {
+    return this.manager.getData(AddressUtils.toObject(address));
   }
 
   public async transfer({
@@ -97,75 +102,36 @@ export class ClientJettonManager extends DomainJettonManager {
     from,
     to,
     amount,
-    forward,
-    customPayload
-  }: JettonTransferRequest): Promise<SendTransactionResponse> {
+    customPayload,
+    forwardFee,
+    forwardMessage
+  }: JettonTransferRequest): Promise<void> {
     const payloadData: DomainJettonTransferRequest = {
       to: AddressUtils.toObject(to),
       amount: BigInt(amount),
       responseDestination: AddressUtils.toObject(from)
     };
     if (customPayload != null) {
-      payloadData.customPayload = this.createMessagePayload(customPayload);
+      payloadData.customPayload = this.manager.createMessagePayload(customPayload);
     }
-    if (forward != null) {
-      payloadData.forwardAmount = BigInt(forward.fee);
-      payloadData.forwardPayload = this.createMessagePayload(forward.message);
+    if (forwardFee != null) {
+      payloadData.forwardAmount = BigInt(forwardFee);
     }
-    const payload = this.createTransferPayload(payloadData);
+    if (forwardMessage != null) {
+      payloadData.forwardPayload = this.manager.createMessagePayload(forwardMessage);
+    }
 
-    const walletAddress = await this.getWalletAddress(
+    const payload = this.manager.createTransferPayload(payloadData);
+
+    const walletAddress = await this.manager.getWalletAddress(
       AddressUtils.toObject(jetton),
       AddressUtils.toObject(from)
     );
 
-    return this.walletConnector.sendTransaction({
-      validUntil: createTransactionExpiration(),
-      messages: [
-        {
-          address: AddressUtils.toString(walletAddress),
-          amount: Convertor.toNano(ClientJettonManager.transferFeePrepay).toString(),
-          payload: payload.toBoc().toString('base64')
-        }
-      ]
+    this.sender.send({
+      to: walletAddress,
+      value: Convertor.toNano(DomainJettonManager.transferFeePrepay),
+      body: payload
     });
-  }
-}
-
-/** GameFi specific */
-
-export interface JettonMinter {
-  totalSupply: number;
-  mintable: boolean;
-  adminAddress: string;
-  jettonContent: Cell;
-  jettonWalletCode: Cell;
-}
-
-export class JettonManager {
-  private readonly manager: ClientJettonManager;
-
-  constructor(
-    tonClient: TonClient,
-    protected readonly walletConnector: WalletConnector
-  ) {
-    this.manager = new ClientJettonManager(tonClient, walletConnector);
-  }
-
-  public async getData(address: Address | string): Promise<JettonMinter> {
-    const data = await this.manager.getData(AddressUtils.toObject(address));
-
-    return {
-      totalSupply: Number(data.totalSupply),
-      mintable: data.mintable,
-      adminAddress: data.adminAddress == null ? '' : AddressUtils.toString(data.adminAddress),
-      // todo parse content
-      jettonContent: data.jettonContent,
-      jettonWalletCode: data.jettonWalletCode
-    };
-  }
-
-  public transfer(params: JettonTransferRequest): Promise<SendTransactionResponse> {
-    return this.manager.transfer(params);
   }
 }
