@@ -37,7 +37,7 @@ export interface GameFiConstructorParams {
   merchant?: Merchant;
 }
 
-export abstract class GameFi {
+export abstract class GameFiBase {
   public readonly walletConnector: WalletConnector;
   public readonly tonClient: TonClient;
   public readonly merchant?: Merchant;
@@ -102,9 +102,9 @@ export abstract class GameFi {
   ): Promise<GameFiConstructorParams> {
     const {connector, client, network = 'testnet'} = params;
 
-    const walletConnector = GameFi.isTonConnectUiInstance(connector)
+    const walletConnector = GameFiBase.isTonConnectUiInstance(connector)
       ? connector
-      : GameFi.createConnectUiWorkaround(connector);
+      : GameFiBase.createConnectUiWorkaround(connector);
 
     let tonClient: TonClient;
     if (client instanceof TonClient) {

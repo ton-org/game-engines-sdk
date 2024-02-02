@@ -1,11 +1,6 @@
 import {ParsedContent} from './content';
+import {ParsedNftContent} from './content-nft';
 import {TonConnectUiOptionsWithManifest} from '@tonconnect/ui';
-
-export type ParsedNftContent = {
-  name?: string;
-  description?: string;
-  image?: string | Buffer;
-};
 
 export {
   SendTransactionRequest,
