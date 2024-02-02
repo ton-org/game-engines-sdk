@@ -1,4 +1,4 @@
-import {Locale} from './interfaces';
+import {LocalesDictionary} from './interfaces';
 
 export const LIGHT_DIAMOND = 'diamond-light';
 export const DARK_DIAMOND = 'diamond-dark';
@@ -64,12 +64,6 @@ export const buttonDesign = {
     verticalPadding: 11
   }
 };
-
-export interface LocalesDictionary {
-  en: Locale;
-  ru: Locale;
-  [k: string]: Locale;
-}
 
 export const locales: LocalesDictionary = {
   en: {

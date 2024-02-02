@@ -4,3 +4,9 @@ export interface Locale {
   copyAddress: string;
   addressCopied: string;
 }
+
+export interface LocalesDictionary {
+  en: Locale;
+  ru: Locale;
+  [k: string]: Locale;
+}

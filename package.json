@@ -3,11 +3,13 @@
     "private": true,
     "workspaces": ["packages/phaser"],
     "scripts": {
-        "check-types": "tsc --noEmit"
+        "check-types": "tsc --noEmit",
+        "typedoc": "typedoc --out docs packages/phaser/src/index.ts"
     },
     "devDependencies": {
         "@types/node": "^20.10.7",
         "lefthook": "^1.5.5",
-        "typescript": "~5.3.3"
+        "typescript": "~5.3.3",
+        "typedoc": "^0.25.7"
     }
 }

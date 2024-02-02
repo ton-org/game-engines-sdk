@@ -16,10 +16,3 @@ export abstract class Convertor {
 
   public static fromNano = fromNano;
 }
-
-/**
- * @deprecated
- */
-export function createTransactionExpiration(seconds: number = 3600): number {
-  return Math.floor(Date.now() / 1000) + seconds;
-}

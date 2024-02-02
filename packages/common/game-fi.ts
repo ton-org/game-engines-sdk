@@ -1,5 +1,5 @@
 import {TonClient, getHttpEndpoint, TonClientOptions, TonConnectUI, Address} from './external';
-import {WalletConnector, WalletConnectorOptions, Wallet, Account} from './interfaces';
+import {WalletConnector, WalletConnectorOptions, Wallet, Account, WalletApp} from './interfaces';
 import {TonConnectSender} from './ton-connect-sender';
 import {NftCollectionManager} from './nft-collection';
 import {NftItemManager, NftTransferRequest} from './nft-item';
@@ -20,9 +20,25 @@ export interface MerchantInitialization {
 }
 
 export interface GameFiInitializationParams {
+  /**
+   * @defaultValue testnet
+   */
   network?: Network;
+  /**
+   * Pass TonConnectUI instance to use HTML based flow.
+   * Pass connector options to use game engine specific connect button implementation (headless mode),
+   * like Phaser `createConnectButton` or draw connect button by yourself.
+   * @defaultValue headless mode
+   */
   connector?: WalletConnector | WalletConnectorOptions;
+  /**
+   * TonClient instance or only its params.
+   */
   client?: TonClient | TonClientOptions;
+  /**
+   * TON wallet address and jetton wallet address of in-game shop.
+   * In-game purchases will be send to those addresses.
+   */
   merchant?: MerchantInitialization;
 }
 
@@ -37,6 +53,11 @@ export interface GameFiConstructorParams {
   merchant?: Merchant;
 }
 
+/**
+ * GameFiBase is a parent for every implementation of GameFi.
+ * Game engine specific implementations like Phaser only needs to define
+ * its own `create` and `createConnectButton` methods.
+ */
 export abstract class GameFiBase {
   public readonly walletConnector: WalletConnector;
   public readonly tonClient: TonClient;
@@ -74,7 +95,7 @@ export abstract class GameFiBase {
   }
 
   public get walletAddress(): Address {
-    return Address.parse(this.wallet.account.address);
+    return Address.parseRaw(this.wallet.account.address);
   }
 
   public get merchantAddress(): Address {
@@ -97,6 +118,10 @@ export abstract class GameFiBase {
     return this.merchant.tonAddress;
   }
 
+  /**
+   * Prepares dependencies to game engine implementations use it for `create` method.
+   * These dependencies will be used to create an GameFi instance further.
+   */
   protected static async createDependencies(
     params: GameFiInitializationParams = {}
   ): Promise<GameFiConstructorParams> {
@@ -125,6 +150,11 @@ export abstract class GameFiBase {
     return {walletConnector, tonClient};
   }
 
+  /**
+   * Send TON or jetton to merchant wallet address (game shop).
+   * If `jetton` prop passed, it's jetton transfer, otherwise - TON transfer.
+   * It's a shorthand for `send` method.
+   */
   public buy(params: BuyParams): Promise<void> {
     return this.paymentManager.transfer({
       ...params,
@@ -133,15 +163,24 @@ export abstract class GameFiBase {
     });
   }
 
+  /**
+   * Send TON or jetton to custom wallet address.
+   * If `jetton` prop passed, it's jetton transfer, otherwise - TON transfer.
+   */
   public send(params: SendParams): Promise<void> {
     return this.paymentManager.transfer({...params, from: this.walletAddress});
   }
 
-  /** NFT collection methods */
+  /**
+   * Get data of an NFT collection.
+   */
   public getCollectionData(address: Address | string) {
     return this.nftCollectionManager.getData(address);
   }
 
+  /**
+   * Get NFT item address from collection using its index.
+   */
   public async getNftAddressByIndex(
     collectionAddress: Address | string,
     itemIndex: number | bigint
@@ -149,6 +188,9 @@ export abstract class GameFiBase {
     return this.nftCollectionManager.getNftAddressByIndex(collectionAddress, itemIndex);
   }
 
+  /**
+   * Get NFT item from collection using its index.
+   */
   public async getNftItemByIndex(collectionAddress: Address | string, itemIndex: number | bigint) {
     const nftAddress = await this.nftCollectionManager.getNftAddressByIndex(
       collectionAddress,
@@ -158,24 +200,47 @@ export abstract class GameFiBase {
     return this.nftItemManager.getData(nftAddress);
   }
 
-  /** NFT item methods */
+  /**
+   * Get NFT item by address.
+   */
   public getNftItem(address: Address | string) {
     return this.nftItemManager.getData(address);
   }
 
+  /**
+   * Get NFT item to another wallet address.
+   */
   public transferNftItem(params: NftTransferParams) {
     return this.nftItemManager.transfer({...params, from: this.walletAddress});
   }
 
-  /** Jetton methods */
+  /**
+   * Get jetton data by address.
+   */
   public getJetton(address: Address | string) {
     return this.jettonManager.getData(address);
   }
 
+  /**
+   * Transfer some jetton amount to another address.
+   */
   public async transferJetton(params: Omit<JettonTransferRequest, 'from'>) {
     return this.jettonManager.transfer({...params, from: this.walletAddress});
   }
 
+  /**
+   * Call connectWallet programmatically in case
+   * you are not going to use TonConnectUI provided UI or game engine provided button
+   * and you draw your own UI.
+   */
+  public connectWallet(app: WalletApp) {
+    return this.walletConnector.openSingleWalletModal(app);
+  }
+
+  /**
+   * Watch weather wallet was connected or disconnected.
+   * Use the method to reflect it on the UI state.
+   */
   public onWalletChange(...params: Parameters<WalletConnector['onStatusChange']>): () => void {
     const unsubscribe = this.walletConnector.onStatusChange(...params);
 
@@ -188,6 +253,14 @@ export abstract class GameFiBase {
     });
 
     return unsubscribe;
+  }
+
+  /**
+   * Call connectWallet programmatically in case
+   * you draw your own UI.
+   */
+  public disconnectWallet() {
+    return this.walletConnector.disconnect();
   }
 
   protected static isTonConnectUiInstance(instance: unknown): instance is WalletConnector {

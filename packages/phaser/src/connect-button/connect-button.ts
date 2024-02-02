@@ -1,4 +1,4 @@
-import {WalletConnector, Wallet} from '../../../common/interfaces';
+import {WalletConnector, Wallet, WalletApp} from '../../../common/interfaces';
 import {Locale} from './interfaces';
 import {Locales, Styles} from './types';
 import {DropdownMenu, DropdownMenuItem} from './dropdown';
@@ -13,22 +13,36 @@ import {
 import {hexToNumber, rawAddressToFriendly, smoothScale} from './utils';
 import {loadIcons} from './icons';
 
-export type WalletSource =
-  | 'telegram-wallet'
-  | 'tonkeeper'
-  | 'mytonwallet'
-  | 'openmask'
-  | 'tonhub'
-  | 'dewallet'
-  | 'xtonwallet'
-  | 'tonwallet';
+interface HandleError {
+  (error: Error | unknown): void;
+}
 
-export interface ConnectWalletParams {
+export interface ConnectWalletButtonParams {
+  /**
+   * Light or dark mode.
+   * @defaultValue light
+   */
   style?: Styles;
-  onWalletChange?: (wallet: Wallet | null) => void;
-  onError: (error: Error | unknown) => void;
+  /**
+   * Interface language.Check available `Locales` in the related type.
+   * @defaultValue en
+   */
   language?: Locales;
-  walletSource?: WalletSource;
+  /**
+   * Which wallet app will be connected. Check `WalletApp` to see available options.
+   * @defaultValue telegram-wallet
+   */
+  walletApp?: WalletApp;
+  /**
+   * Subscribe to wallet connect and disconnect events.
+   * You can also use global `onWalletChange` method of `GameFi` instance instead.
+   */
+  onWalletChange?: (wallet: Wallet | null) => void;
+  /**
+   * Error handler function.
+   * You can also use `try`/`catch` operator instead.
+   */
+  onError?: HandleError;
 }
 
 export class ConnectWalletButton extends Phaser.GameObjects.Container {
@@ -39,24 +53,45 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
   buttonWidth: number;
   buttonHeight: number;
   wallet: Wallet | null = null;
-  params: ConnectWalletParams;
-  connectionSourceName: WalletSource;
+  params: ConnectWalletButtonParams;
+  connectionSourceName: WalletApp;
   unsubscribeFromConnector: () => void;
   dropdownMenu?: DropdownMenu;
   locale: Locale;
   currentIcon: string;
   changeIconTimer: NodeJS.Timeout | number | null = null;
+  private onError: HandleError;
 
   constructor(
+    /**
+     * TonConnectUI instance.
+     */
+    private readonly connector: WalletConnector,
+    /**
+     * UI scene the button will be added to.
+     */
     scene: Phaser.Scene,
+    /**
+     * X coordinate for the button.
+     */
     x: number = 0,
+    /**
+     * Y coordinate for the button.
+     */
     y: number = 0,
-    params: ConnectWalletParams,
-    private readonly connector: WalletConnector
+    /**
+     * Button related parameters. Check `ConnectWalletButtonParams` interface.
+     */
+    params: ConnectWalletButtonParams = {}
   ) {
     super(scene, x, y);
     this.params = params;
-    this.connectionSourceName = params.walletSource || 'telegram-wallet';
+    this.connectionSourceName = params.walletApp || 'telegram-wallet';
+    this.onError = this.params.onError
+      ? this.params.onError
+      : (error) => {
+          throw error;
+        };
     this.loadAssets(scene);
 
     const locale = locales[params.language ?? 'en'];
@@ -70,8 +105,6 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
     const btnCtr = new Phaser.GameObjects.Container(scene, 0, 0);
 
     const textObject = scene.add.text(
-      // 0,
-      // 0,
       buttonDesign.horizontalPadding + buttonDesign.icon.width,
       buttonDesign.verticalPadding,
       locale.connectWallet,
@@ -108,7 +141,6 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
     button.fillRoundedRect(0, 0, buttonWidth, buttonHeight, buttonDesign.borderRadius);
     button.strokeRoundedRect(0, 0, buttonWidth, buttonHeight, buttonDesign.borderRadius);
     this.buttonBackground = button;
-    // button.setInteractive(new Phaser.Geom.Rectangle(0, 0, buttonWidth, buttonHeight), Phaser.Geom.Rectangle.Contains);
 
     btnCtr.on('pointerover', () => {
       scene.game.canvas.style.cursor = 'pointer';
@@ -171,46 +203,46 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
     this.setSize(this.buttonWidth, this.buttonHeight);
   }
 
-  private loadAssets(scene: Phaser.Scene) {
-    loadIcons(scene.textures).then(() => {
-      const icon = scene.add.image(
-        buttonDesign.horizontalPadding -
-          buttonDesign.icon.horizontalPadding +
-          buttonDesign.icon.width * 0.5,
-        this.buttonHeight * 0.5,
-        this.currentIcon
-      );
-      this.buttonIcon = icon;
+  private async loadAssets(scene: Phaser.Scene): Promise<void> {
+    await loadIcons(scene.textures);
 
-      this.dropdownMenu = new DropdownMenu(
-        scene,
-        0,
-        this.buttonHeight + buttonDesign.dropDown.topMargin,
-        {
-          style: this.params.style ?? 'light',
-          items: [
-            {
-              icon: this.params.style === 'dark' ? DARK_COPY : LIGHT_COPY,
-              text: this.locale.copyAddress,
-              onClick: this.copyAddress
-            },
-            {
-              icon: this.params.style === 'dark' ? DARK_DISCONNECT : LIGHT_DISCONNECT,
-              text: this.locale.disconnectWallet,
-              onClick: () => {
-                this.toggleDropdownMenu();
-                this.disconnectWallet();
-              }
+    const icon = scene.add.image(
+      buttonDesign.horizontalPadding -
+        buttonDesign.icon.horizontalPadding +
+        buttonDesign.icon.width * 0.5,
+      this.buttonHeight * 0.5,
+      this.currentIcon
+    );
+    this.buttonIcon = icon;
+
+    this.dropdownMenu = new DropdownMenu(
+      scene,
+      0,
+      this.buttonHeight + buttonDesign.dropDown.topMargin,
+      {
+        style: this.params.style ?? 'light',
+        items: [
+          {
+            icon: this.params.style === 'dark' ? DARK_COPY : LIGHT_COPY,
+            text: this.locale.copyAddress,
+            onClick: this.copyAddress
+          },
+          {
+            icon: this.params.style === 'dark' ? DARK_DISCONNECT : LIGHT_DISCONNECT,
+            text: this.locale.disconnectWallet,
+            onClick: () => {
+              this.toggleDropdownMenu();
+              this.disconnectWallet();
             }
-          ]
-        }
-      );
-      this.dropdownMenu.setVisible(false);
+          }
+        ]
+      }
+    );
+    this.dropdownMenu.setVisible(false);
 
-      this.buttonContainer.add([this.buttonBackground, this.buttonIcon, this.buttonText]);
-      this.add([this.buttonContainer, this.dropdownMenu]);
-      scene.add.existing(this);
-    });
+    this.buttonContainer.add([this.buttonBackground, this.buttonIcon, this.buttonText]);
+    this.add([this.buttonContainer, this.dropdownMenu]);
+    scene.add.existing(this);
   }
 
   private changeIcon(icon: string) {
@@ -238,7 +270,7 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
       this.disable();
       await this.connector.openSingleWalletModal(this.connectionSourceName);
     } catch (error) {
-      this.params.onError(error);
+      this.onError(error);
     } finally {
       this.enable();
     }
@@ -249,7 +281,7 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
       this.disable();
       await this.connector.disconnect();
     } catch (error) {
-      this.params.onError(error);
+      this.onError(error);
     } finally {
       this.enable();
     }
@@ -267,13 +299,12 @@ export class ConnectWalletButton extends Phaser.GameObjects.Container {
       setTimeout(() => {
         try {
           item.text.setText(oldText);
-          // this.toggleDropdownMenu();
         } catch (error) {
           // ignore in case the object was destroyed by leaving the scene
         }
       }, 500);
     } catch (error) {
-      this.params.onError(error);
+      this.onError(error);
     }
   };
 

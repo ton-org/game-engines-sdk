@@ -19,3 +19,12 @@ export type WalletConnectorOptions = Pick<
 
 export {NftContentData} from './content';
 export type NftContent = ParsedContent<ParsedNftContent>;
+export type WalletApp =
+  | 'telegram-wallet'
+  | 'tonkeeper'
+  | 'mytonwallet'
+  | 'openmask'
+  | 'tonhub'
+  | 'dewallet'
+  | 'xtonwallet'
+  | 'tonwallet';
