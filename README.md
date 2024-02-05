@@ -56,7 +56,7 @@ This can be used for:
 | [disconnectWallet](https://barinbritva.github.io/ton-gamefi/classes/GameFi.html#disconnectWallet) | disconnect wallet manually (without build-in UIs) |
 | [buy](https://barinbritva.github.io/ton-gamefi/classes/GameFi.html#buy) | buy from in-game shop with jetton or TON |
 | [send](https://barinbritva.github.io/ton-gamefi/classes/GameFi.html#send) | transfer jetton or TON to another wallet address |
-| [getCollectionData](https://barinbritva.github.io/ton-gamefi/classes/GameFi.html#getCollectionData) | get collection data |
+| [getNftCollection](https://barinbritva.github.io/ton-gamefi/classes/GameFi.html#getNftCollection) | get collection data |
 | [getNftAddressByIndex](https://barinbritva.github.io/ton-gamefi/classes/GameFi.html#getNftAddressByIndex) | get NFT address by its index in a collection |
 | [getNftItem](https://barinbritva.github.io/ton-gamefi/classes/GameFi.html#getNftItem) | get NFT data by address |
 | [getNftItemByIndex](https://barinbritva.github.io/ton-gamefi/classes/GameFi.html#getNftItemByIndex) | get NFT data by its index in a collection |

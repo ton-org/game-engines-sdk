@@ -174,7 +174,7 @@ export abstract class GameFiBase {
   /**
    * Get data of an NFT collection.
    */
-  public getCollectionData(address: Address | string) {
+  public getNftCollection(address: Address | string) {
     return this.nftCollectionManager.getData(address);
   }
 
