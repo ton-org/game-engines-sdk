@@ -6,7 +6,7 @@ export interface CreateConnectButtonParams {
   scene: Phaser.Scene;
   positionX?: number;
   positionY?: number;
-  buttonOptions?: ConnectWalletButtonParams;
+  button?: ConnectWalletButtonParams;
 }
 
 export class GameFi extends GameFiBase {
@@ -29,7 +29,7 @@ export class GameFi extends GameFiBase {
       params.scene,
       params.positionX ?? 0,
       params.positionY ?? 0,
-      params.buttonOptions
+      params.button
     );
   }
 }

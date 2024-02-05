@@ -12,7 +12,7 @@ export {
   type TonConnectUI as WalletConnector
 } from '@tonconnect/ui';
 
-export type WalletConnectorOptions = Pick<
+export type WalletConnectorParams = Pick<
   TonConnectUiOptionsWithManifest,
   'manifestUrl' | 'actionsConfiguration'
 >;

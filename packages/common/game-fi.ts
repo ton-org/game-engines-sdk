@@ -1,5 +1,5 @@
-import {TonClient, getHttpEndpoint, TonClientOptions, TonConnectUI, Address} from './external';
-import {WalletConnector, WalletConnectorOptions, Wallet, Account, WalletApp} from './interfaces';
+import {TonClient, getHttpEndpoint, TonClientParams, TonConnectUI, Address} from './external';
+import {WalletConnector, WalletConnectorParams, Wallet, Account, WalletApp} from './interfaces';
 import {TonConnectSender} from './ton-connect-sender';
 import {NftCollectionManager} from './nft-collection';
 import {
@@ -42,11 +42,11 @@ export interface GameFiInitializationParams {
    * like Phaser `createConnectButton` or draw connect button by yourself.
    * @defaultValue headless mode
    */
-  connector?: WalletConnector | WalletConnectorOptions;
+  connector?: WalletConnector | WalletConnectorParams;
   /**
    * TonClient instance or only its params.
    */
-  client?: TonClient | TonClientOptions;
+  client?: TonClient | TonClientParams;
   /**
    * Loading collections, NFTs, etc. information requires requests to external resources.
    * Some of those resources may block direct requests from browsers by CORS policies.
@@ -162,16 +162,16 @@ export abstract class GameFiBase {
     if (client instanceof TonClient) {
       tonClient = client;
     } else {
-      let clientOptions: TonClientOptions;
+      let clientParams: TonClientParams;
       if (client == null) {
         const endpoint = await getHttpEndpoint({
           network
         });
-        clientOptions = {endpoint};
+        clientParams = {endpoint};
       } else {
-        clientOptions = client;
+        clientParams = client;
       }
-      tonClient = new TonClient(clientOptions);
+      tonClient = new TonClient(clientParams);
     }
 
     const contentResolverParams: ProxyContentResolverParams = {};
@@ -316,9 +316,7 @@ export abstract class GameFiBase {
     return typeof instance === 'object' && instance != null && 'openModal' in instance;
   }
 
-  protected static createConnectUiWorkaround(
-    options: WalletConnectorOptions = {}
-  ): WalletConnector {
+  protected static createConnectUiWorkaround(params: WalletConnectorParams = {}): WalletConnector {
     // we need 100% TonConnectUI functionality, but without visual parts
     // to reuse the logic, but not to implement fork, use the workaround
     // todo remove this workaround
@@ -340,7 +338,7 @@ export abstract class GameFiBase {
     document.body.appendChild(widgetRoot);
 
     return new TonConnectUI({
-      ...options,
+      ...params,
       buttonRootId: buttonRoot.id,
       widgetRootId: widgetRoot.id
     });
