@@ -1,4 +1,4 @@
-import {DefaultContentResolver, loadFullContent} from './content';
+import {ContentResolver, loadFullContent} from './content';
 import {parseNftContent} from './content-nft';
 import {TonClient, Address, Cell, beginCell, Sender} from './external';
 import {NftContent} from './interfaces';
@@ -105,7 +105,8 @@ export class NftItemManager {
 
   constructor(
     private readonly tonClient: TonClient,
-    private readonly sender: Sender
+    private readonly sender: Sender,
+    private readonly contentResolver: ContentResolver
   ) {
     this.manager = new DomainNftItemManager(this.tonClient);
   }
@@ -121,7 +122,7 @@ export class NftItemManager {
       content:
         domainData.content == null
           ? null
-          : parseNftContent(await loadFullContent(domainData.content, new DefaultContentResolver()))
+          : parseNftContent(await loadFullContent(domainData.content, this.contentResolver))
     };
   }
 

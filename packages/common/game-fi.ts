@@ -2,6 +2,13 @@ import {TonClient, getHttpEndpoint, TonClientOptions, TonConnectUI, Address} fro
 import {WalletConnector, WalletConnectorOptions, Wallet, Account, WalletApp} from './interfaces';
 import {TonConnectSender} from './ton-connect-sender';
 import {NftCollectionManager} from './nft-collection';
+import {
+  IpfsGateway,
+  ProxyContentResolver,
+  ProxyContentResolverParams,
+  UrlProxy,
+  ContentResolver
+} from './content-resolver';
 import {NftItemManager, NftTransferRequest} from './nft-item';
 import {JettonManager, JettonTransferRequest} from './jetton';
 import {PaymentManager, TonTransferRequest} from './payment';
@@ -14,9 +21,14 @@ export type BuyParams =
 
 export type Network = 'mainnet' | 'testnet';
 
-export interface MerchantInitialization {
+export interface MerchantParams {
   tonAddress: Address | string;
   jettonAddress: Address | string;
+}
+
+export interface ContentResolverParams {
+  ipfsGateway?: IpfsGateway;
+  urlProxy?: UrlProxy | string;
 }
 
 export interface GameFiInitializationParams {
@@ -36,10 +48,18 @@ export interface GameFiInitializationParams {
    */
   client?: TonClient | TonClientOptions;
   /**
+   * Loading collections, NFTs, etc. information requires requests to external resources.
+   * Some of those resources may block direct requests from browsers by CORS policies.
+   * Pass function or template string which will be used to generate proxy URL. For example:
+   * `http://localhost:3000/cors-passthrough?url=%URL%` - %URL% will be replaced by URL
+   * your proxy server should follow.
+   */
+  contentResolver?: ContentResolverParams;
+  /**
    * TON wallet address and jetton wallet address of in-game shop.
    * In-game purchases will be send to those addresses.
    */
-  merchant?: MerchantInitialization;
+  merchant?: MerchantParams;
 }
 
 export interface Merchant {
@@ -50,6 +70,7 @@ export interface Merchant {
 export interface GameFiConstructorParams {
   walletConnector: WalletConnector;
   tonClient: TonClient;
+  contentResolver: ContentResolver;
   merchant?: Merchant;
 }
 
@@ -61,6 +82,7 @@ export interface GameFiConstructorParams {
 export abstract class GameFiBase {
   public readonly walletConnector: WalletConnector;
   public readonly tonClient: TonClient;
+  public readonly contentResolver: ContentResolver;
   public readonly merchant?: Merchant;
 
   private readonly nftCollectionManager: NftCollectionManager;
@@ -71,13 +93,18 @@ export abstract class GameFiBase {
   constructor(params: GameFiConstructorParams) {
     this.walletConnector = params.walletConnector;
     this.tonClient = params.tonClient;
+    this.contentResolver = params.contentResolver;
     if (params.merchant != null) {
       this.merchant = params.merchant;
     }
 
     const transactionSender = new TonConnectSender(this.walletConnector);
     this.nftCollectionManager = new NftCollectionManager(this.tonClient);
-    this.nftItemManager = new NftItemManager(this.tonClient, transactionSender);
+    this.nftItemManager = new NftItemManager(
+      this.tonClient,
+      transactionSender,
+      this.contentResolver
+    );
     this.jettonManager = new JettonManager(this.tonClient, transactionSender);
     this.paymentManager = new PaymentManager(this.jettonManager, transactionSender);
   }
@@ -147,7 +174,25 @@ export abstract class GameFiBase {
       tonClient = new TonClient(clientOptions);
     }
 
-    return {walletConnector, tonClient};
+    const contentResolverParams: ProxyContentResolverParams = {};
+    if (params.contentResolver != null) {
+      const {ipfsGateway, urlProxy} = params.contentResolver;
+      if (ipfsGateway != null) {
+        contentResolverParams.ipfsGateway = ipfsGateway;
+      }
+      if (urlProxy != null) {
+        if (typeof urlProxy === 'string') {
+          contentResolverParams.urlProxy = (url) => {
+            return urlProxy.replace(ProxyContentResolver.replaceable, url);
+          };
+        } else {
+          contentResolverParams.urlProxy = urlProxy;
+        }
+      }
+    }
+    const contentResolver = new ProxyContentResolver(contentResolverParams);
+
+    return {walletConnector, tonClient, contentResolver};
   }
 
   /**
