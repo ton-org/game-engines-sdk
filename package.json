@@ -1,15 +1,21 @@
 {
     "name": "ton-gamefi",
     "private": true,
+    "engines": {
+        "node": ">=18.0.0",
+        "npm": ">=9.0.0"
+    },
     "workspaces": ["packages/phaser"],
     "scripts": {
         "check-types": "tsc --noEmit",
-        "typedoc": "typedoc --out docs packages/phaser/src/index.ts"
+        "typedoc": "typedoc --out docs packages/phaser/src/index.ts",
+        "lint": "prettier --check \"./**/*.{js,jsx,ts,tsx,json,yml}\""
     },
     "devDependencies": {
         "@types/node": "^20.10.7",
         "lefthook": "^1.5.5",
         "typescript": "~5.3.3",
-        "typedoc": "^0.25.7"
+        "typedoc": "^0.25.7",
+        "prettier": "3.2.5"
     }
 }
