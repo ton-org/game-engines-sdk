@@ -5,7 +5,7 @@ export {getHttpEndpoint} from '@orbs-network/ton-access';
 export {Sender, SenderArguments, SendMode, storeStateInit} from '@ton/core';
 
 // add export of TonClientParameters to @ton/ton package
-export interface TonClientOptions {
+export interface TonClientParams {
   endpoint: string;
   timeout?: number;
   apiKey?: string;
