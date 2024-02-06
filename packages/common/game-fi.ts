@@ -17,7 +17,7 @@ export type NftTransferParams = Omit<NftTransferRequest, 'from'>;
 export type SendParams = Omit<TonTransferRequest, 'from'> | Omit<JettonTransferRequest, 'from'>;
 export type BuyParams =
   | Omit<TonTransferRequest, 'from' | 'to'>
-  | Omit<JettonTransferRequest, 'from' | 'to'>;
+  | (Omit<JettonTransferRequest, 'from' | 'to' | 'jetton'> & {jetton?: true});
 
 export type Network = 'mainnet' | 'testnet';
 
