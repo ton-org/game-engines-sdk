@@ -1,13 +1,13 @@
-# gamefi-sdk
+# game-engines-sdk
 
-TON bindings and utilities for game engines:
+TON blockchain bindings and utilities for game engines:
 * Phaser.io
 * Cocos2d (coming soon)
 
 # Getting started
 Installation:
 ```sh
-npm install --save @ton-community/gamefi-phaser
+npm install --save @barinbritva/phaser-sdk
 ```
 
 Creating GameFi instance:
