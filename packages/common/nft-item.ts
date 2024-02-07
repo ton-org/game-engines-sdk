@@ -35,11 +35,8 @@ export class DomainNftItemManager {
     this.collectionManager = new DomainNftCollectionManager(this.tonClient);
   }
 
-  public async getData(address: Address | string): Promise<DomainNftItem> {
-    const {stack} = await this.tonClient.runMethod(
-      typeof address === 'string' ? Address.parse(address) : address,
-      'get_nft_data'
-    );
+  public async getData(address: Address): Promise<DomainNftItem> {
+    const {stack} = await this.tonClient.runMethod(address, 'get_nft_data');
 
     const data: DomainNftItem = {
       initialized: stack.readBoolean(),
@@ -85,6 +82,7 @@ export class DomainNftItemManager {
 export interface Nft {
   initialized: boolean;
   index: bigint;
+  address: Address;
   collection: Address | null;
   owner: Address | null;
   content: NftContent | null;
@@ -112,11 +110,13 @@ export class NftItemManager {
   }
 
   public async getData(address: Address | string): Promise<Nft> {
-    const domainData = await this.manager.getData(address);
+    const addressObject = AddressUtils.toObject(address);
+    const domainData = await this.manager.getData(addressObject);
 
     return {
       initialized: domainData.initialized,
       index: domainData.index,
+      address: addressObject,
       collection: domainData.collection,
       owner: domainData.owner,
       content:

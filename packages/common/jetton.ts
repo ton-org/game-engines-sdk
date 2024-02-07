@@ -81,7 +81,9 @@ export interface JettonTransferRequest {
   forwardMessage?: string;
 }
 
-export interface JettonMinter extends DomainJettonMinter {}
+export interface JettonMinter extends DomainJettonMinter {
+  address: Address;
+}
 
 export class JettonManager {
   private readonly manager: DomainJettonManager;
@@ -94,7 +96,13 @@ export class JettonManager {
   }
 
   public async getData(address: Address | string): Promise<JettonMinter> {
-    return this.manager.getData(AddressUtils.toObject(address));
+    const addressObject = AddressUtils.toObject(address);
+    const domainData = await this.manager.getData(addressObject);
+
+    return {
+      ...domainData,
+      address: addressObject
+    };
   }
 
   public async transfer({

@@ -15,11 +15,8 @@ export interface DomainNftCollection {
 export class DomainNftCollectionManager {
   constructor(private readonly tonClient: TonClient) {}
 
-  public async getData(address: Address | string): Promise<DomainNftCollection> {
-    const {stack} = await this.tonClient.runMethod(
-      typeof address === 'string' ? Address.parse(address) : address,
-      'get_collection_data'
-    );
+  public async getData(address: Address): Promise<DomainNftCollection> {
+    const {stack} = await this.tonClient.runMethod(address, 'get_collection_data');
 
     return {
       nextItemIndex: stack.readBigNumber(),
@@ -59,6 +56,7 @@ export class DomainNftCollectionManager {
 /** Client specific */
 
 export interface NftCollection {
+  address: Address;
   nextItemIndex: bigint;
   content: NftContent;
   owner: Address | null;
@@ -75,9 +73,11 @@ export class NftCollectionManager {
   }
 
   public async getData(address: Address | string): Promise<NftCollection> {
-    const domainData = await this.domainManager.getData(address);
+    const addressObject = AddressUtils.toObject(address);
+    const domainData = await this.domainManager.getData(addressObject);
 
     return {
+      address: addressObject,
       nextItemIndex: domainData.nextItemIndex,
       content: parseNftContent(await loadFullContent(domainData.content, this.contentResolver)),
       owner: domainData.owner
