@@ -1,5 +1,5 @@
 {
-    "name": "@barinbritva/phaser-sdk",
+    "name": "@ton/phaser-sdk",
     "version": "0.1.0",
     "files": ["./dist"],
     "main": "dist/phaser/src/index.js",
