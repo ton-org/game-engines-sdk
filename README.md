@@ -7,7 +7,7 @@ TON blockchain bindings and utilities for game engines:
 # Getting started
 Installation:
 ```sh
-npm install --save @barinbritva/phaser-sdk
+npm install --save @ton/phaser-sdk
 ```
 
 Creating GameFi instance:
@@ -44,40 +44,40 @@ This can be used for:
 
 | Method | Description |
 | -------- | -------- |
-| [create](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#create) | creates a GameFi instance |
+| [create](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#create) | creates a GameFi instance |
 
 `GameFi` instance methods:
 
 | Method | Description |
 | -------- | -------- |
-| [createConnectButton](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#createConnectButton) | creates a button to connect a wallet. |
-| [connectWallet](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#connectWallet) | connect wallet manually (without build-in UIs) |
-| [onWalletChange](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#onWalletChange) | watch weather wallet was connected or disconnected |
-| [disconnectWallet](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#disconnectWallet) | disconnect wallet manually (without build-in UIs) |
-| [buy](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#buy) | buy from in-game shop with jetton or TON |
-| [send](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#send) | transfer jetton or TON to another wallet address |
-| [getNftCollection](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#getNftCollection) | get collection data |
-| [getNftAddressByIndex](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#getNftAddressByIndex) | get NFT address by its index in a collection |
-| [getNftItem](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#getNftItem) | get NFT data by address |
-| [getNftItemByIndex](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#getNftItemByIndex) | get NFT data by its index in a collection |
+| [createConnectButton](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#createConnectButton) | creates a button to connect a wallet. |
+| [connectWallet](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#connectWallet) | connect wallet manually (without build-in UIs) |
+| [onWalletChange](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#onWalletChange) | watch weather wallet was connected or disconnected |
+| [disconnectWallet](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#disconnectWallet) | disconnect wallet manually (without build-in UIs) |
+| [buy](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#buy) | buy from in-game shop with jetton or TON |
+| [send](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#send) | transfer jetton or TON to another wallet address |
+| [getNftCollection](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#getNftCollection) | get collection data |
+| [getNftAddressByIndex](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#getNftAddressByIndex) | get NFT address by its index in a collection |
+| [getNftItem](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#getNftItem) | get NFT data by address |
+| [getNftItemByIndex](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#getNftItemByIndex) | get NFT data by its index in a collection |
 | [transferNftItem](docs/classes/GameFi.html#transferNftItem) | transfer NFT to another wallet address |
-| [getJetton](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#getJetton) | get jetton data |
-| [transferJetton](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#transferJetton) | transfer jetton to another wallet address |
+| [getJetton](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#getJetton) | get jetton data |
+| [transferJetton](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#transferJetton) | transfer jetton to another wallet address |
 
 `GameFi` instance props:
 
 | Prop | Description |
 | -------- | -------- |
-| [tonClient](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#tonClient) | ton client instance in case you need to use it |
-| [walletConnector](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#walletConnector) | wallet connector instance in case you need to use it |
-| [wallet](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#wallet) | user's connected wallet |
-| [walletAccount](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#walletAccount) | user's connected account |
-| [walletAddress](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#walletAddress) | user's connected wallet address |
-| [merchantAddress](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#merchantAddress) | in-game shop's address to receive TON |
-| [merchantJettonAddress](https://barinbritva.github.io/game-engines-sdk/classes/GameFi.html#merchantJettonAddress) | in-game shop's jetton used as in-game currency |
+| [tonClient](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#tonClient) | ton client instance in case you need to use it |
+| [walletConnector](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#walletConnector) | wallet connector instance in case you need to use it |
+| [wallet](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#wallet) | user's connected wallet |
+| [walletAccount](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#walletAccount) | user's connected account |
+| [walletAddress](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#walletAddress) | user's connected wallet address |
+| [merchantAddress](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#merchantAddress) | in-game shop's address to receive TON |
+| [merchantJettonAddress](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#merchantJettonAddress) | in-game shop's jetton used as in-game currency |
 
 # Use cases
 To learn complex use cases read [TON GameFi article](https://gist.github.com/barinbritva/b3db1605f2667b7562b53a23877c0e73) and check out the source code of demo [Flappy Bird game](https://github.com/ton-community/flappy-bird).
 
 # References
-The full [typedoc references](https://barinbritva.github.io/game-engines-sdk/index.html).
+The full [typedoc references](https://ton-org.github.io/game-engines-sdk/index.html).
