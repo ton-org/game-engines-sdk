@@ -137,13 +137,13 @@ export abstract class GameFiBase {
   }
 
   public get merchantJettonAddress(): Address {
-    if (this.merchant == null || this.merchant.tonAddress == null) {
+    if (this.merchant == null || this.merchant.jettonAddress == null) {
       throw new Error(
         'To make payments with jetton pass "merchant.jettonAddress" parameter to "GameFi.create" method.'
       );
     }
 
-    return this.merchant.tonAddress;
+    return this.merchant.jettonAddress;
   }
 
   /**
@@ -216,7 +216,8 @@ export abstract class GameFiBase {
     return this.paymentManager.transfer({
       ...params,
       from: this.walletAddress,
-      to: 'jetton' in params ? this.merchantJettonAddress : this.merchantAddress
+      to: this.merchantAddress,
+      jetton: 'jetton' in params ? this.merchantJettonAddress : undefined
     });
   }
 

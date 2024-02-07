@@ -75,9 +75,9 @@ export interface JettonTransferRequest {
   jetton: Address | string;
   from: Address | string;
   to: Address | string;
-  amount: number | bigint;
+  amount: bigint;
   customPayload?: string;
-  forwardFee?: number | bigint;
+  forwardFee?: bigint;
   forwardMessage?: string;
 }
 
@@ -108,14 +108,14 @@ export class JettonManager {
   }: JettonTransferRequest): Promise<void> {
     const payloadData: DomainJettonTransferRequest = {
       to: AddressUtils.toObject(to),
-      amount: BigInt(amount),
+      amount: amount,
       responseDestination: AddressUtils.toObject(from)
     };
     if (customPayload != null) {
       payloadData.customPayload = this.manager.createMessagePayload(customPayload);
     }
     if (forwardFee != null) {
-      payloadData.forwardAmount = BigInt(forwardFee);
+      payloadData.forwardAmount = forwardFee;
     }
     if (forwardMessage != null) {
       payloadData.forwardPayload = this.manager.createMessagePayload(forwardMessage);

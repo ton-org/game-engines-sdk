@@ -5,7 +5,7 @@ import {AddressUtils} from './utils';
 export interface TonTransferRequest {
   from: Address | string;
   to: Address | string;
-  amount: number | bigint;
+  amount: bigint;
   comment?: string;
 }
 
@@ -30,13 +30,13 @@ export class PaymentManager {
   }
 
   public isJettonTransfer(params: PaymentRequest): params is JettonTransferRequest {
-    return 'jetton' in params;
+    return 'jetton' in params && params.jetton != null;
   }
 
   private transferTon(params: TonTransferRequest) {
     const request: SenderArguments = {
       to: AddressUtils.toObject(params.to),
-      value: BigInt(params.amount)
+      value: params.amount
     };
     if (params.comment != null) {
       request.body = this.createMessagePayload(params.comment);
