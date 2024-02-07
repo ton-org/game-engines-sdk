@@ -9,6 +9,7 @@ import {
   UrlProxy,
   ContentResolver
 } from './content-resolver';
+import {AddressUtils} from './utils';
 import {NftItemManager, NftTransferRequest} from './nft-item';
 import {JettonManager, JettonTransferRequest} from './jetton';
 import {PaymentManager, TonTransferRequest} from './payment';
@@ -23,7 +24,7 @@ export type Network = 'mainnet' | 'testnet';
 
 export interface MerchantParams {
   tonAddress: Address | string;
-  jettonAddress: Address | string;
+  jettonAddress?: Address | string;
 }
 
 export interface ContentResolverParams {
@@ -64,7 +65,7 @@ export interface GameFiInitializationParams {
 
 export interface Merchant {
   tonAddress: Address;
-  jettonAddress: Address;
+  jettonAddress?: Address;
 }
 
 export interface GameFiConstructorParams {
@@ -128,7 +129,7 @@ export abstract class GameFiBase {
   public get merchantAddress(): Address {
     if (this.merchant == null || this.merchant.tonAddress == null) {
       throw new Error(
-        'To make payments pass with TON "merchant.tonAddress" parameter to "GameFi.create" method.'
+        'To make payments with TON pass "merchant.tonAddress" parameter to "GameFi.create" method.'
       );
     }
 
@@ -152,7 +153,7 @@ export abstract class GameFiBase {
   protected static async createDependencies(
     params: GameFiInitializationParams = {}
   ): Promise<GameFiConstructorParams> {
-    const {connector, client, network = 'testnet'} = params;
+    const {connector, client, network = 'testnet', merchant} = params;
 
     const walletConnector = GameFiBase.isTonConnectUiInstance(connector)
       ? connector
@@ -192,7 +193,18 @@ export abstract class GameFiBase {
     }
     const contentResolver = new ProxyContentResolver(contentResolverParams);
 
-    return {walletConnector, tonClient, contentResolver};
+    const dependencies: GameFiConstructorParams = {walletConnector, tonClient, contentResolver};
+    if (merchant != null) {
+      dependencies.merchant = {
+        tonAddress: AddressUtils.toObject(merchant.tonAddress)
+      };
+
+      if (merchant.jettonAddress != null) {
+        dependencies.merchant.jettonAddress = AddressUtils.toObject(merchant.jettonAddress);
+      }
+    }
+
+    return dependencies;
   }
 
   /**
