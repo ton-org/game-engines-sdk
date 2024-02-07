@@ -96,7 +96,7 @@ export interface NftTransferRequest {
   to: Address | string;
   queryId?: number | bigint;
   customPayload?: string;
-  forwardAmount?: number | bigint;
+  forwardAmount?: bigint;
   forwardPayload?: string;
 }
 
@@ -146,7 +146,7 @@ export class NftItemManager {
       request.customPayload = this.manager.createMessagePayload(customPayload);
     }
     if (forwardAmount != null) {
-      request.forwardAmount = BigInt(forwardAmount);
+      request.forwardAmount = forwardAmount;
     }
     if (forwardPayload != null) {
       request.forwardPayload = this.manager.createMessagePayload(forwardPayload);
