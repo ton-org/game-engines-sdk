@@ -100,7 +100,7 @@ export abstract class GameFiBase {
     }
 
     const transactionSender = new TonConnectSender(this.walletConnector);
-    this.nftCollectionManager = new NftCollectionManager(this.tonClient);
+    this.nftCollectionManager = new NftCollectionManager(this.tonClient, this.contentResolver);
     this.nftItemManager = new NftItemManager(
       this.tonClient,
       transactionSender,

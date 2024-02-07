@@ -1,6 +1,8 @@
-import {Address, Cell} from '@ton/core';
-import {TonClient} from '@ton/ton';
+import {Address, Cell, TonClient} from './external';
+import {ContentResolver, loadFullContent} from './content';
+import {parseNftContent} from './content-nft';
 import {AddressUtils} from './utils';
+import {NftContent} from './interfaces';
 
 /** Domain specific */
 
@@ -58,14 +60,17 @@ export class DomainNftCollectionManager {
 
 export interface NftCollection {
   nextItemIndex: bigint;
-  content: string;
+  content: NftContent;
   owner: Address | null;
 }
 
 export class NftCollectionManager {
   private readonly domainManager: DomainNftCollectionManager;
 
-  constructor(private readonly tonClient: TonClient) {
+  constructor(
+    private readonly tonClient: TonClient,
+    private readonly contentResolver: ContentResolver
+  ) {
     this.domainManager = new DomainNftCollectionManager(this.tonClient);
   }
 
@@ -74,8 +79,7 @@ export class NftCollectionManager {
 
     return {
       nextItemIndex: domainData.nextItemIndex,
-      // todo load
-      content: domainData.content.toBoc().toString('base64'),
+      content: parseNftContent(await loadFullContent(domainData.content, this.contentResolver)),
       owner: domainData.owner
     };
   }
