@@ -54,22 +54,24 @@ This can be used for:
 | [connectWallet](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#connectWallet) | connect wallet manually (without build-in UIs) |
 | [onWalletChange](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#onWalletChange) | watch weather wallet was connected or disconnected |
 | [disconnectWallet](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#disconnectWallet) | disconnect wallet manually (without build-in UIs) |
-| [buy](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#buy) | buy from in-game shop with jetton or TON |
-| [send](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#send) | transfer jetton or TON to another wallet address |
-| [getNftCollection](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#getNftCollection) | get collection data |
-| [getNftAddressByIndex](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#getNftAddressByIndex) | get NFT address by its index in a collection |
-| [getNftItem](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#getNftItem) | get NFT data by address |
-| [getNftItemByIndex](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#getNftItemByIndex) | get NFT data by its index in a collection |
-| [transferNftItem](docs/classes/GameFi.html#transferNftItem) | transfer NFT to another wallet address |
-| [getJetton](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#getJetton) | get jetton data |
+| [buyWithTon](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#buyWithTon) | buy from in-game shop with TON |
+| [buyWithJetton](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#buyWithJetton) | buy from in-game shop with jetton |
+| [transferTon](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#transferTon) | transfer TON to another wallet address |
 | [transferJetton](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#transferJetton) | transfer jetton to another wallet address |
+| [openNftCollection](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#openNftCollection) | open NFT collection contract |
+| [openNftSale](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#openNftSale) | open NFT collection contract |
+| [openNftItem](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#openNftItem) | open NFT item contract |
+| [openNftItemByIndex](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#openNftItemByIndex) | open NFT item contract using its index |
+| [openSbtCollection](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#openSbtCollection) | open SBT collection contract |
+| [openJetton](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#openJetton) | Open Jetton contract |
+| [openJettonWallet](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#openJettonWallet) | Open Jetton Wallet contract |
 
 `GameFi` instance props:
 
 | Prop | Description |
 | -------- | -------- |
-| [tonClient](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#tonClient) | ton client instance in case you need to use it |
-| [walletConnector](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#walletConnector) | wallet connector instance in case you need to use it |
+| [assetsSdk](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#assetsSdk) | [asset-sdk](https://github.com/ton-community/assets-sdk) instance in case you need to use it directly |
+| [walletConnector](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#walletConnector) | wallet connector instance in case you need to use it directly |
 | [wallet](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#wallet) | user's connected wallet |
 | [walletAccount](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#walletAccount) | user's connected account |
 | [walletAddress](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#walletAddress) | user's connected wallet address |
