@@ -1,6 +1,5 @@
-import {ParsedContent} from './content';
-import {ParsedNftContent} from './content-nft';
 import {TonConnectUiOptionsWithManifest} from '@tonconnect/ui';
+import {Dictionary} from '@ton/core';
 
 export {
   SendTransactionRequest,
@@ -17,7 +16,27 @@ export type WalletConnectorParams = Pick<
   'manifestUrl' | 'actionsConfiguration'
 >;
 
-export {NftContentData} from './content';
+export type ContentType = 'onchain' | 'offchain' | 'semichain';
+
+export type ParsedContent<T> = T & {
+  type: ContentType;
+  unknownOnchainFields: Dictionary<bigint, Buffer>;
+  unknownOffchainFields: Record<string, any>;
+  offchainUrl?: string;
+};
+
+export type ParsedNftContent = {
+  name?: string;
+  description?: string;
+  image?: string | Buffer;
+};
+
+export interface NftContentData {
+  type: 'onchain' | 'offchain' | 'semichain';
+  onChainData?: Dictionary<bigint, Buffer>;
+  offChainUrl?: string;
+}
+
 export type NftContent = ParsedContent<ParsedNftContent>;
 export type WalletApp =
   | 'telegram-wallet'

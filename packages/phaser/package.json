@@ -11,7 +11,8 @@
     "dependencies": {
         "@tonconnect/ui": "^2.0.1-beta.0",
         "@ton/ton": "^13.9.0",
-        "@orbs-network/ton-access": "^2.3.3"
+        "@orbs-network/ton-access": "^2.3.3",
+        "@ton-community/assets-sdk": "0.0.4-beta.1"
     },
     "peerDependencies": {
         "phaser": "^3.0.0"

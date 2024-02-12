@@ -1,24 +1,36 @@
-import {TonClient, getHttpEndpoint, TonClientParams, TonConnectUI, Address} from './external';
+import {
+  getHttpV4Endpoint,
+  TonConnectUI,
+  Address,
+  AssetsSDK,
+  TonClient4,
+  TonClient4Parameters,
+  Cell,
+  beginCell
+} from './external';
 import {WalletConnector, WalletConnectorParams, Wallet, Account, WalletApp} from './interfaces';
 import {TonConnectSender} from './ton-connect-sender';
-import {NftCollectionManager} from './nft-collection';
 import {
   IpfsGateway,
   ProxyContentResolver,
   ProxyContentResolverParams,
-  UrlProxy,
-  ContentResolver
+  UrlProxy
 } from './content-resolver';
-import {AddressUtils} from './utils';
-import {NftItemManager, NftTransferRequest} from './nft-item';
-import {JettonManager, JettonTransferRequest} from './jetton';
-import {PaymentManager, TonTransferRequest} from './payment';
 
-export type NftTransferParams = Omit<NftTransferRequest, 'from'>;
-export type SendParams = Omit<TonTransferRequest, 'from'> | Omit<JettonTransferRequest, 'from'>;
-export type BuyParams =
-  | Omit<TonTransferRequest, 'from' | 'to'>
-  | (Omit<JettonTransferRequest, 'from' | 'to' | 'jetton'> & {jetton?: true});
+export interface JettonTransferRequest {
+  jetton: Address;
+  to: Address;
+  amount: bigint;
+  customPayload?: string;
+  forwardFee?: bigint;
+  forwardMessage?: string;
+}
+
+export interface TonTransferRequest {
+  to: Address;
+  amount: bigint;
+  comment?: string;
+}
 
 export type Network = 'mainnet' | 'testnet';
 
@@ -47,7 +59,7 @@ export interface GameFiInitializationParams {
   /**
    * TonClient instance or only its params.
    */
-  client?: TonClient | TonClientParams;
+  client?: TonClient4 | TonClient4Parameters;
   /**
    * Loading collections, NFTs, etc. information requires requests to external resources.
    * Some of those resources may block direct requests from browsers by CORS policies.
@@ -70,8 +82,7 @@ export interface Merchant {
 
 export interface GameFiConstructorParams {
   walletConnector: WalletConnector;
-  tonClient: TonClient;
-  contentResolver: ContentResolver;
+  assetsSdk: AssetsSDK;
   merchant?: Merchant;
 }
 
@@ -82,32 +93,15 @@ export interface GameFiConstructorParams {
  */
 export abstract class GameFiBase {
   public readonly walletConnector: WalletConnector;
-  public readonly tonClient: TonClient;
-  public readonly contentResolver: ContentResolver;
+  public readonly assetsSdk: AssetsSDK;
   public readonly merchant?: Merchant;
-
-  private readonly nftCollectionManager: NftCollectionManager;
-  private readonly nftItemManager: NftItemManager;
-  private readonly jettonManager: JettonManager;
-  private readonly paymentManager: PaymentManager;
 
   constructor(params: GameFiConstructorParams) {
     this.walletConnector = params.walletConnector;
-    this.tonClient = params.tonClient;
-    this.contentResolver = params.contentResolver;
+    this.assetsSdk = params.assetsSdk;
     if (params.merchant != null) {
       this.merchant = params.merchant;
     }
-
-    const transactionSender = new TonConnectSender(this.walletConnector);
-    this.nftCollectionManager = new NftCollectionManager(this.tonClient, this.contentResolver);
-    this.nftItemManager = new NftItemManager(
-      this.tonClient,
-      transactionSender,
-      this.contentResolver
-    );
-    this.jettonManager = new JettonManager(this.tonClient, transactionSender);
-    this.paymentManager = new PaymentManager(this.jettonManager, transactionSender);
   }
 
   public get wallet(): Wallet {
@@ -147,143 +141,98 @@ export abstract class GameFiBase {
   }
 
   /**
-   * Prepares dependencies to game engine implementations use it for `create` method.
-   * These dependencies will be used to create an GameFi instance further.
+   * Send TON to merchant wallet address (in-game shop).
    */
-  protected static async createDependencies(
-    params: GameFiInitializationParams = {}
-  ): Promise<GameFiConstructorParams> {
-    const {connector, client, network = 'testnet', merchant} = params;
-
-    const walletConnector = GameFiBase.isTonConnectUiInstance(connector)
-      ? connector
-      : GameFiBase.createConnectUiWorkaround(connector);
-
-    let tonClient: TonClient;
-    if (client instanceof TonClient) {
-      tonClient = client;
-    } else {
-      let clientParams: TonClientParams;
-      if (client == null) {
-        const endpoint = await getHttpEndpoint({
-          network
-        });
-        clientParams = {endpoint};
-      } else {
-        clientParams = client;
-      }
-      tonClient = new TonClient(clientParams);
-    }
-
-    const contentResolverParams: ProxyContentResolverParams = {};
-    if (params.contentResolver != null) {
-      const {ipfsGateway, urlProxy} = params.contentResolver;
-      if (ipfsGateway != null) {
-        contentResolverParams.ipfsGateway = ipfsGateway;
-      }
-      if (urlProxy != null) {
-        if (typeof urlProxy === 'string') {
-          contentResolverParams.urlProxy = (url) => {
-            return urlProxy.replace(ProxyContentResolver.replaceable, url);
-          };
-        } else {
-          contentResolverParams.urlProxy = urlProxy;
-        }
-      }
-    }
-    const contentResolver = new ProxyContentResolver(contentResolverParams);
-
-    const dependencies: GameFiConstructorParams = {walletConnector, tonClient, contentResolver};
-    if (merchant != null) {
-      dependencies.merchant = {
-        tonAddress: AddressUtils.toObject(merchant.tonAddress)
-      };
-
-      if (merchant.jettonAddress != null) {
-        dependencies.merchant.jettonAddress = AddressUtils.toObject(merchant.jettonAddress);
-      }
-    }
-
-    return dependencies;
+  public async buyWithTon(params: Omit<TonTransferRequest, 'to'>): Promise<void> {
+    this.transferTon({...params, to: this.merchantAddress});
   }
 
   /**
-   * Send TON or jetton to merchant wallet address (game shop).
-   * If `jetton` prop passed, it's jetton transfer, otherwise - TON transfer.
-   * It's a shorthand for `send` method.
+   * Send TON to other wallet address.
    */
-  public buy(params: BuyParams): Promise<void> {
-    return this.paymentManager.transfer({
+  public async transferTon(params: TonTransferRequest): Promise<void> {
+    if (this.assetsSdk.sender == null) {
+      throw new Error('Sender is not configured.');
+    }
+
+    return this.assetsSdk.sender.send({
       ...params,
-      from: this.walletAddress,
-      to: this.merchantAddress,
-      jetton: 'jetton' in params ? this.merchantJettonAddress : undefined
+      value: params.amount,
+      body: params.comment ? this.createMessagePayload(params.comment) : null
     });
   }
 
   /**
-   * Send TON or jetton to custom wallet address.
-   * If `jetton` prop passed, it's jetton transfer, otherwise - TON transfer.
+   * Send jetton to merchant wallet address (in-game shop).
    */
-  public send(params: SendParams): Promise<void> {
-    return this.paymentManager.transfer({...params, from: this.walletAddress});
+  public async buyWithJetton(params: Omit<JettonTransferRequest, 'to' | 'jetton'>): Promise<void> {
+    this.transferJetton({...params, to: this.merchantAddress});
   }
 
   /**
-   * Get data of an NFT collection.
+   * Send jetton to other wallet address.
    */
-  public getNftCollection(address: Address | string) {
-    return this.nftCollectionManager.getData(address);
+  public async transferJetton(params: Omit<JettonTransferRequest, 'jetton'>): Promise<void> {
+    const jetton = this.assetsSdk.openJetton(this.merchantJettonAddress);
+    const jettonWallet = await jetton.getWallet(this.walletAddress);
+
+    return jettonWallet.sendTransfer({
+      ...params,
+      customPayload: params.customPayload ? this.createMessagePayload(params.customPayload) : null
+    });
   }
 
   /**
-   * Get NFT item address from collection using its index.
+   * Open NFT collection contract.
    */
-  public async getNftAddressByIndex(
-    collectionAddress: Address | string,
-    itemIndex: number | bigint
-  ) {
-    return this.nftCollectionManager.getNftAddressByIndex(collectionAddress, itemIndex);
+  public openNftCollection(address: Address) {
+    return this.assetsSdk.openNftCollection(address);
+  }
+
+  /**
+   * Open NFT sale contract.
+   */
+  public openNftSale(address: Address) {
+    return this.assetsSdk.openNftSale(address);
+  }
+
+  /**
+   * Open NFT contract.
+   */
+  public openNftItem(address: Address) {
+    return this.assetsSdk.openNftItem(address);
   }
 
   /**
    * Get NFT item from collection using its index.
    */
-  public async getNftItemByIndex(collectionAddress: Address | string, itemIndex: number | bigint) {
-    const nftAddress = await this.nftCollectionManager.getNftAddressByIndex(
-      collectionAddress,
-      itemIndex
-    );
+  public async openNftItemByIndex(collectionAddress: Address, itemIndex: bigint) {
+    const nftAddress = await this.assetsSdk
+      .openNftCollection(collectionAddress)
+      .getItemAddress(itemIndex);
 
-    return this.nftItemManager.getData(nftAddress);
+    return this.assetsSdk.openNftItem(nftAddress);
   }
 
   /**
-   * Get NFT item by address.
+   * Open SBT collection contract.
    */
-  public getNftItem(address: Address | string) {
-    return this.nftItemManager.getData(address);
+  public openSbtCollection(address: Address) {
+    return this.assetsSdk.openSbtCollection(address);
   }
 
   /**
-   * Get NFT item to another wallet address.
+   * Open Jetton contract.
    */
-  public transferNftItem(params: NftTransferParams) {
-    return this.nftItemManager.transfer({...params, from: this.walletAddress});
+  public openJetton(address: Address) {
+    return this.assetsSdk.openJetton(address);
   }
 
   /**
-   * Get jetton data by address.
+   * Open Jetton Wallet contract.
    */
-  public getJetton(address: Address | string) {
-    return this.jettonManager.getData(address);
-  }
-
-  /**
-   * Transfer some jetton amount to another address.
-   */
-  public async transferJetton(params: Omit<JettonTransferRequest, 'from'>) {
-    return this.jettonManager.transfer({...params, from: this.walletAddress});
+  public openJettonWallet(address: Address) {
+    return this.assetsSdk.openJettonWallet(address);
   }
 
   /**
@@ -319,6 +268,94 @@ export abstract class GameFiBase {
    */
   public disconnectWallet() {
     return this.walletConnector.disconnect();
+  }
+
+  private createMessagePayload(message: string): Cell {
+    return beginCell().storeUint(0, 32).storeStringTail(message).endCell();
+  }
+
+  /**
+   * Prepares dependencies to game engine implementations use it for `create` method.
+   * These dependencies will be used to create an GameFi instance further.
+   */
+  protected static async createDependencies(
+    params: GameFiInitializationParams = {}
+  ): Promise<GameFiConstructorParams> {
+    const {connector, client, network = 'testnet', merchant} = params;
+
+    const walletConnector = GameFiBase.isTonConnectUiInstance(connector)
+      ? connector
+      : GameFiBase.createConnectUiWorkaround(connector);
+
+    let tonClient: TonClient4;
+    if (client instanceof TonClient4) {
+      tonClient = client;
+    } else {
+      let clientParams: TonClient4Parameters;
+      if (client == null) {
+        const endpoint = await getHttpV4Endpoint({
+          network
+        });
+        clientParams = {endpoint};
+      } else {
+        clientParams = client;
+      }
+      tonClient = new TonClient4(clientParams);
+    }
+
+    const contentResolverParams: ProxyContentResolverParams = {};
+    if (params.contentResolver != null) {
+      const {ipfsGateway, urlProxy} = params.contentResolver;
+      if (ipfsGateway != null) {
+        contentResolverParams.ipfsGateway = ipfsGateway;
+      }
+      if (urlProxy != null) {
+        if (typeof urlProxy === 'string') {
+          contentResolverParams.urlProxy = (url) => {
+            return urlProxy.replace(ProxyContentResolver.replaceable, url);
+          };
+        } else {
+          contentResolverParams.urlProxy = urlProxy;
+        }
+      }
+    }
+    const contentResolver = new ProxyContentResolver(contentResolverParams);
+
+    const assetsSdk = AssetsSDK.create({
+      api: {
+        openExtended: (contract) => {
+          return tonClient.openExtended(contract);
+        },
+        provider: (address, init) => tonClient.provider(address, init)
+      },
+      contentResolver: contentResolver,
+      sender: new TonConnectSender(walletConnector)
+    });
+
+    const dependencies: GameFiConstructorParams = {
+      walletConnector,
+      assetsSdk
+    };
+
+    if (merchant != null) {
+      dependencies.merchant = {
+        tonAddress: GameFiBase.addressToObject(merchant.tonAddress)
+      };
+
+      if (merchant.jettonAddress != null) {
+        dependencies.merchant.jettonAddress = GameFiBase.addressToObject(merchant.jettonAddress);
+      }
+    }
+
+    return dependencies;
+  }
+
+  protected static addressToObject(address: Address | string): Address {
+    if (typeof address === 'string') {
+      return Address.parse(address);
+    }
+
+    return address;
   }
 
   protected static isTonConnectUiInstance(instance: unknown): instance is WalletConnector {
