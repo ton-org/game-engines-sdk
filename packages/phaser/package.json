@@ -1,6 +1,6 @@
 {
     "name": "@ton/phaser-sdk",
-    "version": "0.1.0",
+    "version": "0.0.1-beta.0",
     "files": ["./dist"],
     "main": "dist/phaser/src/index.js",
     "types": "dist/phaser/src/index.d.ts",
