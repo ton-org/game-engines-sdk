@@ -6,7 +6,8 @@ import {
   TonClient4,
   TonClient4Parameters,
   Cell,
-  beginCell
+  beginCell,
+  JettonTransferMessage
 } from './external';
 import {WalletConnector, WalletConnectorParams, Wallet, Account, WalletApp} from './interfaces';
 import {TonConnectSender} from './ton-connect-sender';
@@ -22,8 +23,8 @@ export interface JettonTransferRequest {
   to: Address;
   amount: bigint;
   customPayload?: string;
-  forwardFee?: bigint;
-  forwardMessage?: string;
+  forwardAmount?: bigint;
+  forwardPayload?: string;
 }
 
 export interface TonTransferRequest {
@@ -156,7 +157,7 @@ export abstract class GameFiBase {
     }
 
     return this.assetsSdk.sender.send({
-      ...params,
+      to: params.to,
       value: params.amount,
       body: params.comment ? this.createMessagePayload(params.comment) : null
     });
@@ -176,10 +177,22 @@ export abstract class GameFiBase {
     const jetton = this.assetsSdk.openJetton(this.merchantJettonAddress);
     const jettonWallet = await jetton.getWallet(this.walletAddress);
 
-    return jettonWallet.sendTransfer({
-      ...params,
-      customPayload: params.customPayload ? this.createMessagePayload(params.customPayload) : null
-    });
+    const message: JettonTransferMessage = {
+      amount: params.amount,
+      to: params.to,
+      responseDestination: this.walletAddress
+    };
+    if (params.customPayload != null) {
+      message.customPayload = this.createMessagePayload(params.customPayload);
+    }
+    if (params.forwardAmount != null) {
+      message.forwardAmount = params.forwardAmount;
+    }
+    if (params.forwardPayload != null) {
+      message.forwardPayload = this.createMessagePayload(params.forwardPayload);
+    }
+
+    return jettonWallet.sendTransfer(message);
   }
 
   /**

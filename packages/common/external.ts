@@ -5,7 +5,7 @@ export {TonClient, TonClient4Parameters} from '@ton/ton';
 export {TonConnectUI} from '@tonconnect/ui';
 export {getHttpV4Endpoint} from '@orbs-network/ton-access';
 export {Sender, SenderArguments, SendMode, storeStateInit} from '@ton/core';
-export {AssetsSDK} from '@ton-community/assets-sdk';
+export {AssetsSDK, JettonTransferMessage, NftTransferMessage} from '@ton-community/assets-sdk';
 
 class TonClient4 extends ExtendedTonClient4 {}
 
