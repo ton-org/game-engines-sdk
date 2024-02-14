@@ -18,6 +18,7 @@ jobs:
           ALLOWED_PACKAGES=("phaser") # Add more package names if needed
           if [[ " ${ALLOWED_PACKAGES[@]} " =~ " ${PACKAGE_NAME} " ]]; then
             echo "::set-output name=package::${PACKAGE_NAME}"
+            echo "::set-output name=version::${GITHUB_REF#refs/tags/}"
           else
             echo "Invalid package name ${PACKAGE_NAME}."
             exit 1
@@ -48,6 +49,12 @@ jobs:
         run: npm run build --workspace @ton/${{ steps.get-package.outputs.package }}-sdk
 
       - name: Publish
-        run: cd packages/${{ steps.get-package.outputs.package }} && npm publish --access=public
+        run: |
+          cd packages/${{ steps.get-package.outputs.package }}
+          if echo "${{ steps.get_version.outputs.version }}" | grep -q "\-beta"; then
+            npm publish --access=public --tag=beta
+          else
+            npm publish --access=public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
