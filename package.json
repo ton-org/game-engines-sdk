@@ -4,7 +4,7 @@
         "node": ">=18.0.0",
         "npm": ">=9.0.0"
     },
-    "workspaces": ["packages/phaser"],
+    "workspaces": ["packages/phaser", "packages/cocos"],
     "scripts": {
         "check-types": "tsc --noEmit",
         "typedoc": "typedoc --out docs packages/phaser/src/index.ts",
