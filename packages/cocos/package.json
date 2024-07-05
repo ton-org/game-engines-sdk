@@ -1,0 +1,25 @@
+{
+    "name": "@ton/cocos-sdk",
+    "version": "0.0.1-beta.1",
+    "files": ["./dist"],
+    "main": "dist/cocos/src/index.js",
+    "types": "dist/cocos/src/index.d.ts",
+    "module": "dist/cocos/src/index.js",
+    "scripts": {
+        "dev": "tsc --watch",
+        "build": "tsc",
+        "build:webpack": "webpack --mode production && tsc --declaration --emitDeclarationOnly"
+    },
+    "dependencies": {
+        "@tonconnect/ui": "^2.0.1-beta.0",
+        "@ton/ton": "^13.9.0",
+        "@orbs-network/ton-access": "^2.3.3",
+        "@ton-community/assets-sdk": "0.0.4-beta.1"
+    },
+    "devDependencies": {
+        "webpack": "^5.92.0",
+        "webpack-cli": "^5.1.4",
+        "ts-loader": "^9.5.1",
+        "typescript-declaration-webpack-plugin": "^0.3.0"
+    }
+}
