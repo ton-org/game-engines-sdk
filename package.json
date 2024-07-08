@@ -7,7 +7,7 @@
     "workspaces": ["packages/phaser", "packages/cocos"],
     "scripts": {
         "check-types": "tsc --noEmit",
-        "typedoc": "typedoc --out docs packages/phaser/src/index.ts",
+        "typedoc": "typedoc --out docs packages/phaser/src/index.ts packages/cocos/src/index.ts",
         "lint": "prettier --check \"./**/*.{js,jsx,ts,tsx,json,yml}\""
     },
     "devDependencies": {
