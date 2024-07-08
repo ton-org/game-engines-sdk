@@ -1,6 +1,5 @@
 const path = require('path');
 const webpack = require('webpack');
-const TypescriptDeclarationPlugin = require('typescript-declaration-webpack-plugin');
 
 module.exports = {
   mode: 'production',
@@ -33,10 +32,6 @@ module.exports = {
   plugins: [
     new webpack.ProvidePlugin({
       Buffer: ['buffer', 'Buffer']
-    }),
-    new TypescriptDeclarationPlugin({
-      out: 'index.d.ts',
-      exclude: /node_modules/
     })
   ]
 };
