@@ -1,13 +1,17 @@
 # game-engines-sdk
 
 TON blockchain bindings and utilities for game engines:
-* Phaser.io
-* Cocos2d (coming soon)
+* [Phaser](https://phaser.io)
+* [Cocos](https://www.cocos.com/en)
 
 # Getting started
 Installation:
 ```sh
-npm install --save @ton/phaser-sdk
+# for Phaser
+npm install --save @ton/phaser-sdk@beta
+
+# for Cocos
+npm install --save @ton/cocos-sdk@beta
 ```
 
 Creating GameFi instance:
@@ -79,7 +83,10 @@ This can be used for:
 | [merchantJettonAddress](https://ton-org.github.io/game-engines-sdk/classes/GameFi.html#merchantJettonAddress) | in-game shop's jetton used as in-game currency |
 
 # Use cases
-To learn complex use cases read [TON GameFi article](https://gist.github.com/barinbritva/b3db1605f2667b7562b53a23877c0e73) and check out the source code of demo [Flappy Bird game](https://github.com/ton-community/flappy-bird).
+To learn complex use cases:
+- read [TON GameFi article](https://gist.github.com/barinbritva/b3db1605f2667b7562b53a23877c0e73)
+- check out the source code of [Flappy Bird](https://github.com/ton-community/flappy-bird) demo for Phaser
+- check out the example of [Flappy Bird](https://github.com/CocosTechLabs/flappy-bird) for Cocos
 
 # References
 The full [typedoc references](https://ton-org.github.io/game-engines-sdk/index.html).

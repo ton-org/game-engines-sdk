@@ -6,9 +6,8 @@
     "types": "dist/cocos/src/index.d.ts",
     "module": "dist/index.ts",
     "scripts": {
-        "dev": "tsc --watch",
-        "build": "tsc",
-        "build:webpack": "webpack --mode production"
+        "dev": "webpack --mode development --watch",
+        "build": "webpack --mode production"
     },
     "dependencies": {
         "@tonconnect/ui": "^2.0.1-beta.0",
