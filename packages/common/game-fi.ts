@@ -7,7 +7,8 @@ import {
   TonClient4Parameters,
   Cell,
   beginCell,
-  JettonTransferMessage
+  Sender,
+  JettonSendOptions
 } from './external';
 import {WalletConnector, WalletConnectorParams, Wallet, Account, WalletApp} from './interfaces';
 import {TonConnectSender} from './ton-connect-sender';
@@ -95,11 +96,17 @@ export interface GameFiConstructorParams {
 export abstract class GameFiBase {
   public readonly walletConnector: WalletConnector;
   public readonly assetsSdk: AssetsSDK;
+  public readonly sender: Sender;
   public readonly merchant?: Merchant;
 
   constructor(params: GameFiConstructorParams) {
+    if (params.assetsSdk.sender == null) {
+      throw new Error('Sender is not configured.');
+    }
+
     this.walletConnector = params.walletConnector;
     this.assetsSdk = params.assetsSdk;
+    this.sender = params.assetsSdk.sender;
     if (params.merchant != null) {
       this.merchant = params.merchant;
     }
@@ -177,22 +184,27 @@ export abstract class GameFiBase {
     const jetton = this.assetsSdk.openJetton(this.merchantJettonAddress);
     const jettonWallet = await jetton.getWallet(this.walletAddress);
 
-    const message: JettonTransferMessage = {
-      amount: params.amount,
-      to: params.to,
-      responseDestination: this.walletAddress
+    const options: JettonSendOptions = {
+      returnExcess: {
+        address: this.walletAddress
+      }
     };
     if (params.customPayload != null) {
-      message.customPayload = this.createMessagePayload(params.customPayload);
+      options.customPayload = this.createMessagePayload(params.customPayload);
     }
-    if (params.forwardAmount != null) {
-      message.forwardAmount = params.forwardAmount;
-    }
-    if (params.forwardPayload != null) {
-      message.forwardPayload = this.createMessagePayload(params.forwardPayload);
+    if (params.forwardAmount != null || params.forwardPayload != null) {
+      options.notify = {};
+
+      if (params.forwardAmount != null) {
+        options.notify.amount = params.forwardAmount;
+      }
+
+      if (params.forwardPayload != null) {
+        options.notify.payload = this.createMessagePayload(params.forwardPayload);
+      }
     }
 
-    return jettonWallet.sendTransfer(message);
+    return jettonWallet.send(this.sender, params.to, params.amount, options);
   }
 
   /**
@@ -335,12 +347,7 @@ export abstract class GameFiBase {
     const contentResolver = new ProxyContentResolver(contentResolverParams);
 
     const assetsSdk = AssetsSDK.create({
-      api: {
-        openExtended: (contract) => {
-          return tonClient.openExtended(contract);
-        },
-        provider: (address, init) => tonClient.provider(address, init)
-      },
+      api: tonClient,
       contentResolver: contentResolver,
       sender: new TonConnectSender(walletConnector)
     });
