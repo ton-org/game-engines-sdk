@@ -4,10 +4,10 @@
         "node": ">=18.0.0",
         "npm": ">=9.0.0"
     },
-    "workspaces": ["packages/phaser", "packages/cocos"],
+    "workspaces": ["packages/phaser", "packages/cocos", "packages/vanilla"],
     "scripts": {
         "check-types": "tsc --noEmit",
-        "typedoc": "typedoc --out docs packages/phaser/src/index.ts packages/cocos/src/index.ts",
+        "typedoc": "typedoc --out docs packages/phaser/src/index.ts packages/cocos/src/index.ts packages/vanilla/src/index.ts",
         "lint": "prettier --check \"./**/*.{js,jsx,ts,tsx,json,yml}\""
     },
     "devDependencies": {

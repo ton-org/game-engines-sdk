@@ -15,7 +15,7 @@ jobs:
       - id: get-package
         run: |
           PACKAGE_NAME=$(echo ${GITHUB_REF#refs/tags/} | cut -d- -f1)
-          ALLOWED_PACKAGES=("phaser" "cocos")
+          ALLOWED_PACKAGES=("phaser" "cocos" "vanilla")
           if [[ " ${ALLOWED_PACKAGES[@]} " =~ " ${PACKAGE_NAME} " ]]; then
             echo "::set-output name=package::${PACKAGE_NAME}"
             echo "::set-output name=version::${GITHUB_REF#refs/tags/}"

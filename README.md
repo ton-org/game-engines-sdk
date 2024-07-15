@@ -3,6 +3,7 @@
 TON blockchain bindings and utilities for game engines:
 * [Phaser](https://phaser.io)
 * [Cocos](https://www.cocos.com/en)
+* Vanilla JavaScript
 
 # Getting started
 Installation:
@@ -12,6 +13,9 @@ npm install --save @ton/phaser-sdk@beta
 
 # for Cocos
 npm install --save @ton/cocos-sdk@beta
+
+# for Cocos
+npm install --save @ton/vanilla-sdk@beta
 ```
 
 Creating GameFi instance:
@@ -42,6 +46,12 @@ gameFi.onWalletChange((wallet: Wallet | null) => {
 This can be used for:
 * Watch the wallet state and reflect it on the game UI
 * Restore connection with previously connected user wallet after app reloads
+
+# What SDK should I use?
+
+Engine specific features can be included to related SDKs. For example, `phaser-sdk` has build-it UI for connecting wallet. There is almost no differences between SDKs features right now.
+
+Start with SDK of related engine if you use one. Use `@ton/vanilla-sdk` otherwise.
 
 # GameFi methods & props
 `GameFi` static methods:
