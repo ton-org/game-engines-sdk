@@ -34,5 +34,6 @@
         // Optimizations
         "skipLibCheck": true
     },
-    "include": ["./packages"]
+    "include": ["./packages"],
+    "exclude": ["node_modules", "./packages/**/dist"]
 }
