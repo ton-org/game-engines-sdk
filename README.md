@@ -14,7 +14,7 @@ npm install --save @ton/phaser-sdk@beta
 # for Cocos
 npm install --save @ton/cocos-sdk@beta
 
-# for Cocos
+# for Vanilla
 npm install --save @ton/vanilla-sdk@beta
 ```
 
